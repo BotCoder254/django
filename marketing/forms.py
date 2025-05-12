@@ -10,11 +10,13 @@ class SubscriberForm(forms.ModelForm):
     """
     class Meta:
         model = Subscriber
-        fields = ('email', 'first_name', 'last_name', 'is_active')
+        fields = ('email', 'first_name', 'last_name', 'is_active', 'country', 'city')
         widgets = {
-            'email': forms.EmailInput(attrs={'class': 'form-control'}),
-            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'style': 'height: 38px;'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control', 'style': 'height: 38px;'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control', 'style': 'height: 38px;'}),
+            'country': forms.TextInput(attrs={'class': 'form-control', 'style': 'height: 38px;'}),
+            'city': forms.TextInput(attrs={'class': 'form-control', 'style': 'height: 38px;'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
@@ -24,12 +26,12 @@ class SubscriberImportForm(forms.Form):
     """
     csv_file = forms.FileField(
         label='CSV File',
-        widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.csv'})
+        widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.csv', 'style': 'height: auto; padding: 8px;'})
     )
     subscriber_list = forms.ModelChoiceField(
         queryset=SubscriberList.objects.none(),
         required=False,
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'form-control', 'style': 'height: 38px;'})
     )
 
     def __init__(self, *args, **kwargs):

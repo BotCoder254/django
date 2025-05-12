@@ -2,71 +2,129 @@
 
 /* Default styling for form inputs */
 .form-input,
-input[type="text"],
-input[type="email"],
-input[type="password"],
-input[type="search"],
-select {
-    @apply w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50;
+.form-textarea,
+.form-select,
+.form-multiselect {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    border: 1px solid #d1d5db;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    min-height: 38px;
 }
 
 /* Error state for form inputs */
 .error input[type="text"],
 .error input[type="email"],
 .error input[type="password"],
-.error select {
-    @apply border-red-500 pr-10 focus:border-red-500 focus:ring-red-200;
+.error select,
+.error textarea {
+    border-color: #ef4444;
 }
 
 /* Style for form labels */
 label {
-    @apply block text-sm font-medium text-gray-700 mb-1;
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
 }
 
 /* Improve checkbox/radio styling */
 input[type="checkbox"],
 input[type="radio"] {
-    @apply h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 0.5rem;
 }
 
 /* Style for submit buttons */
 button[type="submit"] {
-    @apply w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    border-radius: 0.375rem;
 }
 
 /* Help text styling */
 .helptext {
-    @apply mt-1 text-xs text-gray-500 block;
+    display: block;
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
 }
 
 /* Error message styling */
 .errorlist {
-    @apply text-red-600 text-sm mt-1 list-none p-0;
+    list-style-type: none;
+    padding: 0;
+    margin: 0.25rem 0 0;
+    color: #ef4444;
+    font-size: 0.75rem;
 }
 
 /* Special form group spacing */
 .form-group {
-    @apply mb-4;
+    margin-bottom: 1rem;
 }
 
 /* Hover effects for links */
 a {
-    @apply transition-colors;
+    color: #4f46e5;
+    text-decoration: none;
 }
 
 /* Form field focus animation */
 .form-input:focus,
-input:focus,
-select:focus {
-    @apply transition-shadow duration-200;
+.form-textarea:focus,
+.form-select:focus,
+.form-multiselect:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
 }
 
 /* Style for social login buttons */
 .social-login-btn {
-    @apply w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
 }
 
 /* Container styling for auth pages */
 .auth-container {
-    @apply flex flex-col md:flex-row h-full min-h-[600px] overflow-hidden bg-white rounded-lg shadow-lg mt-8;
+    max-width: 28rem;
+    margin: 0 auto;
+    padding: 1.5rem;
+}
+
+/* Fix for file inputs */
+input[type="file"] {
+    padding: 0.375rem 0.75rem;
+    line-height: 1.5;
+    height: auto;
+    min-height: 38px;
+}
+
+/* Fix for select dropdowns */
+select {
+    height: 38px;
+    padding: 0.375rem 0.75rem;
+    appearance: auto;
+}
+
+/* Fix for multiple select */
+select[multiple] {
+    height: auto;
+    min-height: 80px;
+}
+
+/* Fix for checkbox alignment */
+.form-check {
+    display: flex;
+    align-items: center;
+}
+
+.form-check-input {
+    margin-right: 0.5rem;
 } 
