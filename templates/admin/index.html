@@ -1,0 +1,225 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style type="text/css">
+    /* Custom admin dashboard styling */
+    .dashboard-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .dashboard-card {
+        flex: 1;
+        min-width: 250px;
+        background-color: white;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        padding: 15px;
+        margin-bottom: 10px;
+    }
+    
+    .dashboard-card h3 {
+        color: #447e9b;
+        font-size: 16px;
+        margin-top: 0;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+    }
+    
+    .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #333;
+        margin: 10px 0;
+    }
+    
+    .stat-label {
+        color: #666;
+        font-size: 14px;
+    }
+    
+    .icon-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .icon {
+        background-color: #f5f5f5;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .icon i {
+        font-size: 24px;
+        color: #447e9b;
+    }
+    
+    .recent-activity {
+        margin-top: 20px;
+    }
+    
+    .activity-item {
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+    
+    .activity-time {
+        color: #999;
+        font-size: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    {% if app_list %}
+    
+    <!-- Dashboard Statistics -->
+    <h2>{% trans 'Dashboard' %}</h2>
+    <div class="dashboard-container">
+        <div class="dashboard-card">
+            <div class="icon-container">
+                <h3>{% trans 'Subscribers' %}</h3>
+                <div class="icon">
+                    <i class="fas fa-users"></i>
+                </div>
+            </div>
+            <div class="stat-value">{{ subscriber_count|default:"0" }}</div>
+            <div class="stat-label">{% trans 'Total Subscribers' %}</div>
+        </div>
+        
+        <div class="dashboard-card">
+            <div class="icon-container">
+                <h3>{% trans 'Campaigns' %}</h3>
+                <div class="icon">
+                    <i class="fas fa-paper-plane"></i>
+                </div>
+            </div>
+            <div class="stat-value">{{ campaign_count|default:"0" }}</div>
+            <div class="stat-label">{% trans 'Total Campaigns' %}</div>
+        </div>
+        
+        <div class="dashboard-card">
+            <div class="icon-container">
+                <h3>{% trans 'Templates' %}</h3>
+                <div class="icon">
+                    <i class="fas fa-envelope"></i>
+                </div>
+            </div>
+            <div class="stat-value">{{ template_count|default:"0" }}</div>
+            <div class="stat-label">{% trans 'Email Templates' %}</div>
+        </div>
+        
+        <div class="dashboard-card">
+            <div class="icon-container">
+                <h3>{% trans 'Users' %}</h3>
+                <div class="icon">
+                    <i class="fas fa-user"></i>
+                </div>
+            </div>
+            <div class="stat-value">{{ user_count|default:"0" }}</div>
+            <div class="stat-label">{% trans 'Registered Users' %}</div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity Card -->
+    <div class="dashboard-card recent-activity">
+        <h3>{% trans 'Recent Activity' %}</h3>
+        {% if recent_activities %}
+            {% for activity in recent_activities %}
+            <div class="activity-item">
+                <div>{{ activity.user }} {{ activity.action }} </div>
+                <div class="activity-time">{{ activity.timestamp }}</div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p>{% trans 'No recent activity.' %}</p>
+        {% endif %}
+    </div>
+    
+    <!-- Admin Modules -->
+    <h2>{% trans 'Admin Modules' %}</h2>
+    {% for app in app_list %}
+        <div class="app-{{ app.app_label }} module{% if app.app_url in request.path %} current-app{% endif %}">
+            <table>
+                <caption>
+                    <a href="{{ app.app_url }}" class="section" title="{% blocktrans with name=app.name %}Models in the {{ name }} application{% endblocktrans %}">{{ app.name }}</a>
+                </caption>
+                {% for model in app.models %}
+                    <tr class="model-{{ model.object_name|lower }}{% if model.admin_url in request.path %} current-model{% endif %}">
+                        {% if model.admin_url %}
+                            <th scope="row"><a href="{{ model.admin_url }}">{{ model.name }}</a></th>
+                        {% else %}
+                            <th scope="row">{{ model.name }}</th>
+                        {% endif %}
+
+                        {% if model.add_url %}
+                            <td><a href="{{ model.add_url }}" class="addlink">{% trans 'Add' %}</a></td>
+                        {% else %}
+                            <td>&nbsp;</td>
+                        {% endif %}
+
+                        {% if model.admin_url %}
+                            {% if model.view_only %}
+                                <td><a href="{{ model.admin_url }}" class="viewlink">{% trans 'View' %}</a></td>
+                            {% else %}
+                                <td><a href="{{ model.admin_url }}" class="changelink">{% trans 'Change' %}</a></td>
+                            {% endif %}
+                        {% else %}
+                            <td>&nbsp;</td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+    {% endfor %}
+    {% else %}
+        <p>{% trans "You don't have permission to view or edit anything." %}</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block sidebar %}
+<div id="content-related">
+    <div class="module" id="recent-actions-module">
+        <h2>{% trans 'Recent actions' %}</h2>
+        <h3>{% trans 'My actions' %}</h3>
+        {% load log %}
+        {% get_admin_log 10 as admin_log for_user user %}
+        {% if not admin_log %}
+            <p>{% trans 'None available' %}</p>
+        {% else %}
+            <ul class="actionlist">
+                {% for entry in admin_log %}
+                <li class="{% if entry.is_addition %}addlink{% endif %}{% if entry.is_change %}changelink{% endif %}{% if entry.is_deletion %}deletelink{% endif %}">
+                    {% if entry.is_deletion or not entry.get_admin_url %}
+                        {{ entry.object_repr }}
+                    {% else %}
+                        <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+                    {% endif %}
+                    <br>
+                    {% if entry.content_type %}
+                        <span class="mini quiet">{% filter capfirst %}{{ entry.content_type.name }}{% endfilter %}</span>
+                    {% else %}
+                        <span class="mini quiet">{% trans 'Unknown content' %}</span>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,119 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrahead %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<style>
+    :root {
+        --primary: #4f46e5;
+        --secondary: #7c3aed;
+        --accent: #818cf8;
+        --primary-fg: #fff;
+    }
+    
+    #header {
+        background: var(--primary);
+        color: var(--primary-fg);
+    }
+    
+    #header a:link, #header a:visited {
+        color: var(--primary-fg);
+    }
+    
+    #header a:hover {
+        color: var(--accent);
+    }
+    
+    #user-tools a:hover {
+        border-bottom-color: var(--accent);
+    }
+    
+    .module h2, .module caption, .inline-group h2 {
+        background: var(--primary);
+        color: var(--primary-fg);
+    }
+    
+    div.breadcrumbs {
+        background: var(--secondary);
+        color: var(--primary-fg);
+    }
+    
+    div.breadcrumbs a {
+        color: var(--primary-fg);
+    }
+    
+    .button, input[type=submit], input[type=button], .submit-row input, a.button {
+        background: var(--primary);
+        color: var(--primary-fg);
+    }
+    
+    .button:hover, input[type=submit]:hover, input[type=button]:hover {
+        background: var(--secondary);
+    }
+    
+    .button.default, input[type=submit].default, .submit-row input.default {
+        background: var(--primary);
+    }
+    
+    .button.default:hover, input[type=submit].default:hover {
+        background: var(--secondary);
+    }
+    
+    .object-tools a:link, .object-tools a:visited {
+        background: var(--primary);
+    }
+    
+    .object-tools a:hover {
+        background: var(--secondary);
+    }
+    
+    .selector-chosen h2 {
+        background: var(--primary) !important;
+    }
+    
+    a:link, a:visited {
+        color: var(--primary);
+    }
+    
+    a:hover {
+        color: var(--secondary);
+    }
+    
+    .paginator a:link, .paginator a:visited {
+        background: var(--primary);
+    }
+    
+    .paginator a:hover {
+        background: var(--secondary);
+    }
+    
+    .dashboard-card {
+        transition: all 0.3s ease;
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">
+    <a href="{% url 'admin:index' %}">
+        <span style="font-weight: 700;">EmailPro</span> <span style="opacity: 0.8;">Admin</span>
+    </a>
+</h1>
+{% endblock %}
+
+{% block welcome-msg %}
+    <strong>{% firstof user.get_short_name user.get_username %}</strong> |
+    <span class="user-role">
+        {% if user.is_superuser %}
+            <i class="fas fa-crown" style="color: gold;"></i> Superuser
+        {% elif user.is_staff %}
+            <i class="fas fa-user-shield" style="color: silver;"></i> Staff
+        {% endif %}
+    </span>
+{% endblock %} 

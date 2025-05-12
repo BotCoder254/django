@@ -22,7 +22,8 @@ urlpatterns = [
     # Email Editor
     path('email-editor/', views.email_editor, name='email_editor'),
     path('email-editor/<int:template_id>/', views.email_editor, name='email_editor_template'),
-    path('api/save-email-template/', views.save_email_template, name='save_email_template'),
+    path('api/save-email-template/', views.save_email_template, name='save_template'),
+    path('api/upload-template-asset/', views.upload_template_asset, name='upload_template_asset'),
     
     # A/B Testing
     path('ab-tests/create/', views.create_ab_test, name='create_ab_test'),
@@ -57,6 +58,7 @@ urlpatterns = [
     path('templates/<int:pk>/', views.email_template_detail, name='email_template_detail'),
     path('templates/<int:pk>/edit/', views.edit_email_template, name='edit_email_template'),
     path('templates/<int:pk>/delete/', views.delete_email_template, name='delete_email_template'),
+    path('templates/<int:pk>/preview/', views.template_preview, name='template_preview'),
     
     # Campaigns
     path('campaigns/', views.campaigns, name='campaigns'),

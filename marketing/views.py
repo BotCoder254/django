@@ -13,6 +13,7 @@ import csv
 import io
 import json
 import datetime
+import os
 
 from .models import (
     Subscriber, 
@@ -1167,6 +1168,46 @@ def save_email_template(request):
         return JsonResponse({'success': True, 'template_id': template.id})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+def upload_template_asset(request):
+    """
+    API endpoint to upload assets for email templates
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'})
+    
+    files = []
+    for key, file in request.FILES.items():
+        # Save file to media directory
+        file_path = f'template_assets/{request.user.id}/{file.name}'
+        full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+        
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(full_path), exist_ok=True)
+        
+        # Save the file
+        with open(full_path, 'wb+') as destination:
+            for chunk in file.chunks():
+                destination.write(chunk)
+        
+        # Add file info to response
+        file_url = f'{settings.MEDIA_URL}{file_path}'
+        files.append({
+            'src': file_url,
+            'name': file.name,
+            'type': file.content_type
+        })
+    
+    return JsonResponse({'success': True, 'files': files})
+
+@login_required
+def template_preview(request, pk):
+    """
+    Preview an email template
+    """
+    template = get_object_or_404(EmailTemplate, pk=pk, owner=request.user)
+    return render(request, 'marketing/template_preview.html', {'template': template})
 
 @login_required
 def create_ab_test(request):

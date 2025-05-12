@@ -20,6 +20,12 @@
             <a href="{% url 'campaign_detail' pk=campaign.pk %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                 <i class="fas fa-arrow-left mr-2"></i> Back to Campaign
             </a>
+            <a href="#" class="ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" id="export-csv">
+                <i class="fas fa-download mr-2"></i> Export as CSV
+            </a>
+            <a href="#" class="ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" id="export-pdf">
+                <i class="fas fa-file-pdf mr-2"></i> Export as PDF
+            </a>
         </div>
     </div>
 
@@ -269,10 +275,26 @@
         </div>
     </div>
 </div>
+
+<!-- JSON data for charts -->
+<script id="chart-data" type="application/json">
+{
+    "openTimes": {{ open_times_json|safe }},
+    "openCounts": {{ open_counts_json|safe }},
+    "clickTimes": {{ click_times_json|safe }},
+    "clickCounts": {{ click_counts_json|safe }},
+    "deviceLabels": {{ device_labels_json|safe }},
+    "deviceData": {{ device_data_json|safe }},
+    "browserLabels": {{ browser_labels_json|safe }},
+    "browserData": {{ browser_data_json|safe }}
+}
+</script>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const opensChartEl = document.getElementById('opens-chart');
@@ -280,15 +302,27 @@
         const deviceChartEl = document.getElementById('device-chart');
         const browserChartEl = document.getElementById('browser-chart');
         
+        // Get chart data from the JSON element
+        const chartDataEl = document.getElementById('chart-data');
+        let chartData = {};
+        
+        try {
+            if (chartDataEl && chartDataEl.textContent) {
+                chartData = JSON.parse(chartDataEl.textContent);
+            }
+        } catch (e) {
+            console.error('Error parsing chart data:', e);
+        }
+        
         // Opens Over Time Chart
-        if (opensChartEl) {
+        if (opensChartEl && chartData.openTimes && chartData.openCounts) {
             new Chart(opensChartEl, {
                 type: 'line',
                 data: {
-                    labels: JSON.parse('{{ open_times_json|escapejs }}'),
+                    labels: chartData.openTimes,
                     datasets: [{
                         label: 'Opens',
-                        data: JSON.parse('{{ open_counts_json|escapejs }}'),
+                        data: chartData.openCounts,
                         fill: false,
                         borderColor: 'rgb(79, 70, 229)',
                         tension: 0.1
@@ -315,14 +349,14 @@
         }
         
         // Clicks Over Time Chart
-        if (clicksChartEl) {
+        if (clicksChartEl && chartData.clickTimes && chartData.clickCounts) {
             new Chart(clicksChartEl, {
                 type: 'line',
                 data: {
-                    labels: JSON.parse('{{ click_times_json|escapejs }}'),
+                    labels: chartData.clickTimes,
                     datasets: [{
                         label: 'Clicks',
-                        data: JSON.parse('{{ click_counts_json|escapejs }}'),
+                        data: chartData.clickCounts,
                         fill: false,
                         borderColor: 'rgb(59, 130, 246)',
                         tension: 0.1
@@ -349,13 +383,13 @@
         }
         
         // Device Breakdown Chart
-        if (deviceChartEl) {
+        if (deviceChartEl && chartData.deviceLabels && chartData.deviceData) {
             new Chart(deviceChartEl, {
                 type: 'doughnut',
                 data: {
-                    labels: JSON.parse('{{ device_labels_json|escapejs }}'),
+                    labels: chartData.deviceLabels,
                     datasets: [{
-                        data: JSON.parse('{{ device_data_json|escapejs }}'),
+                        data: chartData.deviceData,
                         backgroundColor: [
                             'rgb(79, 70, 229)',
                             'rgb(59, 130, 246)',
@@ -378,13 +412,13 @@
         }
         
         // Browser Breakdown Chart
-        if (browserChartEl) {
+        if (browserChartEl && chartData.browserLabels && chartData.browserData) {
             new Chart(browserChartEl, {
                 type: 'doughnut',
                 data: {
-                    labels: JSON.parse('{{ browser_labels_json|escapejs }}'),
+                    labels: chartData.browserLabels,
                     datasets: [{
-                        data: JSON.parse('{{ browser_data_json|escapejs }}'),
+                        data: chartData.browserData,
                         backgroundColor: [
                             'rgb(79, 70, 229)',
                             'rgb(59, 130, 246)',
@@ -406,6 +440,72 @@
                 }
             });
         }
+        
+        // Export to CSV
+        document.getElementById('export-csv').addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Get campaign name for filename
+            const campaignName = "{{ campaign.name|default:'campaign'|slugify }}";
+            
+            // Prepare CSV content
+            let csvContent = "data:text/csv;charset=utf-8,";
+            
+            // Add headers
+            csvContent += "Metric,Value\r\n";
+            
+            // Add performance metrics
+            csvContent += "Emails Sent,{{ analytics.sent_count }}\r\n";
+            csvContent += "Opens,{{ analytics.open_count }}\r\n";
+            csvContent += "Open Rate,{{ analytics.open_rate|floatformat:1 }}%\r\n";
+            csvContent += "Clicks,{{ analytics.click_count }}\r\n";
+            csvContent += "Click Rate,{{ analytics.click_rate|floatformat:1 }}%\r\n";
+            csvContent += "Bounces,{{ analytics.bounce_count }}\r\n";
+            csvContent += "Bounce Rate,{{ analytics.bounce_rate|floatformat:1 }}%\r\n";
+            
+            // Create download link
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `${campaignName}-analytics.csv`);
+            document.body.appendChild(link);
+            
+            // Trigger download
+            link.click();
+            document.body.removeChild(link);
+        });
+        
+        // Export to PDF
+        document.getElementById('export-pdf').addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Get campaign name for filename
+            const campaignName = "{{ campaign.name|default:'campaign'|slugify }}";
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            
+            // PDF title
+            doc.setFontSize(20);
+            doc.text("{{ campaign.name }} - Analytics Report", 15, 15);
+            
+            // Add campaign date
+            doc.setFontSize(12);
+            doc.text("Campaign sent on {{ campaign.sent_time|date:'M d, Y H:i' }}", 15, 25);
+            
+            // Add performance metrics
+            doc.setFontSize(16);
+            doc.text("Performance Summary", 15, 40);
+            
+            doc.setFontSize(12);
+            doc.text("Emails Sent: {{ analytics.sent_count }}", 15, 50);
+            doc.text("Opens: {{ analytics.open_count }} ({{ analytics.open_rate|floatformat:1 }}%)", 15, 55);
+            doc.text("Clicks: {{ analytics.click_count }} ({{ analytics.click_rate|floatformat:1 }}%)", 15, 60);
+            doc.text("Bounces: {{ analytics.bounce_count }} ({{ analytics.bounce_rate|floatformat:1 }}%)", 15, 65);
+            
+            // Save PDF
+            doc.save(`${campaignName}-analytics.pdf`);
+        });
     });
 </script>
 {% endblock %} 

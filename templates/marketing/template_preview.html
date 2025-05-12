@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ template.name }} - Preview</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #ffffff;
+        }
+        
+        /* Ensure images don't overflow their containers */
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+        
+        /* Email container */
+        .email-container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        {{ template.html_content|safe }}
+    </div>
+</body>
+</html> 

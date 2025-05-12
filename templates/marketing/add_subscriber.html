@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load user_tags %}
+
+{% block title %}Add Subscriber - EmailPro{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="md:flex md:items-center md:justify-between mb-6">
+        <div class="flex-1 min-w-0">
+            <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+                Add Subscriber
+            </h2>
+            <p class="mt-1 text-sm text-gray-500">
+                Add a new subscriber to your contact list
+            </p>
+        </div>
+        <div class="mt-4 flex md:mt-0 md:ml-4">
+            <a href="{% url 'subscriber_list' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Subscribers
+            </a>
+        </div>
+    </div>
+
+    <!-- Form Card -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <form method="post">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="rounded-md bg-red-50 p-4 mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-circle text-red-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">
+                                There were errors with your submission
+                            </h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <ul class="list-disc pl-5 space-y-1">
+                                    {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="space-y-6">
+                    <!-- Contact Info -->
+                    <div>
+                        <h3 class="text-lg font-medium leading-6 text-gray-900">Contact Information</h3>
+                        <p class="mt-1 text-sm text-gray-500">Subscriber contact details.</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                        <div class="sm:col-span-3">
+                            <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                Email Address*
+                            </label>
+                            <div class="mt-1">
+                                {{ form.email|add_class:"h-10 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" }}
+                            </div>
+                            {% if form.email.errors %}
+                            <p class="mt-2 text-sm text-red-600">
+                                {{ form.email.errors|join:", " }}
+                            </p>
+                            {% endif %}
+                        </div>
+
+                        <div class="sm:col-span-3">
+                            <label for="subscriber_lists" class="block text-sm font-medium text-gray-700">
+                                Subscriber Lists
+                            </label>
+                            <div class="mt-1">
+                                <select name="lists" id="subscriber_lists" multiple class="h-auto min-h-[80px] shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                                    {% for list in subscriber_lists %}
+                                    <option value="{{ list.id }}">{{ list.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500">
+                                Hold Ctrl (or Cmd) to select multiple lists
+                            </p>
+                        </div>
+
+                        <div class="sm:col-span-3">
+                            <label for="{{ form.first_name.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                First Name
+                            </label>
+                            <div class="mt-1">
+                                {{ form.first_name|add_class:"h-10 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" }}
+                            </div>
+                            {% if form.first_name.errors %}
+                            <p class="mt-2 text-sm text-red-600">
+                                {{ form.first_name.errors|join:", " }}
+                            </p>
+                            {% endif %}
+                        </div>
+
+                        <div class="sm:col-span-3">
+                            <label for="{{ form.last_name.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                Last Name
+                            </label>
+                            <div class="mt-1">
+                                {{ form.last_name|add_class:"h-10 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" }}
+                            </div>
+                            {% if form.last_name.errors %}
+                            <p class="mt-2 text-sm text-red-600">
+                                {{ form.last_name.errors|join:", " }}
+                            </p>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Additional personal details -->
+                        <div class="sm:col-span-3">
+                            <label for="{{ form.country.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                Country
+                            </label>
+                            <div class="mt-1">
+                                {{ form.country|add_class:"h-10 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" }}
+                            </div>
+                            {% if form.country.errors %}
+                            <p class="mt-2 text-sm text-red-600">
+                                {{ form.country.errors|join:", " }}
+                            </p>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="sm:col-span-3">
+                            <label for="{{ form.city.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                City
+                            </label>
+                            <div class="mt-1">
+                                {{ form.city|add_class:"h-10 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" }}
+                            </div>
+                            {% if form.city.errors %}
+                            <p class="mt-2 text-sm text-red-600">
+                                {{ form.city.errors|join:", " }}
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Additional Info -->
+                    <div class="pt-6 border-t border-gray-200">
+                        <h3 class="text-lg font-medium leading-6 text-gray-900">Status</h3>
+                        <p class="mt-1 text-sm text-gray-500">Subscription status and verification.</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                        <div class="sm:col-span-3">
+                            <div class="flex items-start">
+                                <div class="flex items-center h-5">
+                                    {{ form.is_active|add_class:"focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded" }}
+                                </div>
+                                <div class="ml-3 text-sm">
+                                    <label for="{{ form.is_active.id_for_label }}" class="font-medium text-gray-700">
+                                        Active Subscriber
+                                    </label>
+                                    <p class="text-gray-500">
+                                        Uncheck to mark as unsubscribed.
+                                    </p>
+                                    {% if form.is_active.errors %}
+                                    <p class="mt-2 text-sm text-red-600">
+                                        {{ form.is_active.errors|join:", " }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-5 mt-6 border-t border-gray-200">
+                    <div class="flex justify-end space-x-3">
+                        <a href="{% url 'subscriber_list' %}" class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Cancel
+                        </a>
+                        <button type="submit" name="add_another" class="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Save & Add Another
+                        </button>
+                        <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Add Subscriber
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -182,6 +182,55 @@ class EmailEvent(models.Model):
     def __str__(self):
         return f"{self.event_type} - {self.subscriber.email} - {self.campaign.name}"
 
+class Link(models.Model):
+    """
+    Model to track links in campaigns
+    """
+    campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name='links')
+    url = models.URLField(max_length=500)
+    label = models.CharField(max_length=255, blank=True)
+    is_tracked = models.BooleanField(default=True)
+    click_count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['url']
+    
+    def __str__(self):
+        return f"{self.url[:50]}... ({self.campaign.name})" if len(self.url) > 50 else f"{self.url} ({self.campaign.name})"
+
+class EmailOpen(models.Model):
+    """
+    Model to track email opens
+    """
+    campaign_analytics = models.ForeignKey(CampaignAnalytics, on_delete=models.CASCADE, related_name='opens')
+    subscriber = models.ForeignKey(Subscriber, on_delete=models.CASCADE, related_name='opens')
+    timestamp = models.DateTimeField(auto_now_add=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-timestamp']
+    
+    def __str__(self):
+        return f"Open - {self.subscriber.email} - {self.campaign_analytics.campaign.name}"
+
+class LinkClick(models.Model):
+    """
+    Model to track link clicks
+    """
+    link = models.ForeignKey(Link, on_delete=models.CASCADE, related_name='clicks')
+    subscriber = models.ForeignKey(Subscriber, on_delete=models.CASCADE, related_name='link_clicks')
+    timestamp = models.DateTimeField(auto_now_add=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-timestamp']
+    
+    def __str__(self):
+        return f"Click - {self.subscriber.email} - {self.link.url[:30]}..."
+
 class Notification(models.Model):
     """
     Model to store user notifications
