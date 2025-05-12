@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Upgrade Subscription - EmailPro{% endblock %}
+
+{% block extra_css %}
+<style>
+    .plan-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        transition: all 0.2s ease;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    .plan-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    .plan-card.recommended {
+        border-color: #4f46e5;
+    }
+    .plan-card.recommended .plan-header {
+        background-color: #4f46e5;
+        color: white;
+    }
+    .plan-header {
+        border-top-left-radius: 0.5rem;
+        border-top-right-radius: 0.5rem;
+        padding: 1.5rem;
+    }
+    .plan-features {
+        padding: 1.5rem;
+        flex-grow: 1;
+    }
+    .feature-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+    .feature-icon {
+        color: #4f46e5;
+        margin-right: 0.75rem;
+    }
+    .feature-icon.unavailable {
+        color: #d1d5db;
+    }
+    .plan-footer {
+        padding: 1.5rem;
+        border-top: 1px solid #e5e7eb;
+    }
+    .recommended-badge {
+        position: absolute;
+        top: -12px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #4f46e5;
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 500;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container max-w-7xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">Upgrade Subscription</h1>
+            <p class="text-sm text-gray-500 mt-1">Choose the plan that's right for you</p>
+        </div>
+    </div>
+
+    <div class="mb-8">
+        <div class="bg-white shadow overflow-hidden sm:rounded-lg p-6">
+            <p class="text-gray-600 mb-2">Current Plan: <span class="font-medium text-indigo-600">{{ user.subscription_plan|title }}</span></p>
+            <p class="text-gray-600">Monthly Usage: {{ user.usage_count|default:0 }} / {{ user.usage_quota|default:0 }} emails</p>
+        </div>
+    </div>
+
+    <!-- Pricing Plans -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- Basic Plan -->
+        <div class="relative">
+            <div class="plan-card {% if user.subscription_plan == 'basic' %}active{% endif %}">
+                <div class="plan-header bg-gray-50">
+                    <h3 class="text-xl font-bold text-gray-800">Basic</h3>
+                    <div class="mt-2">
+                        <span class="text-3xl font-bold text-gray-900">$29</span>
+                        <span class="text-gray-500">/month</span>
+                    </div>
+                </div>
+                <div class="plan-features">
+                    <ul class="space-y-3">
+                        <li class="feature-item"><i class="fas fa-check feature-icon"></i> 5,000 emails per month</li>
+                        <li class="feature-item"><i class="fas fa-check feature-icon"></i> Basic email templates</li>
+                        <li class="feature-item"><i class="fas fa-check feature-icon"></i> Basic analytics</li>
+                        <li class="feature-item"><i class="fas fa-check feature-icon"></i> Email support</li>
+                        <li class="feature-item"><i class="fas fa-times feature-icon unavailable"></i> A/B testing</li>
+                        <li class="feature-item"><i class="fas fa-times feature-icon unavailable"></i> Advanced analytics</li>
+                        <li class="feature-item"><i class="fas fa-times feature-icon unavailable"></i> Dedicated support</li>
+                    </ul>
+                </div>
+                <div class="plan-footer">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="plan" value="basic">
+                        <button type="submit" class="w-full px-4 py-2 border {% if user.subscription_plan == 'basic' %}border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed{% else %}border-transparent bg-indigo-600 hover:bg-indigo-700 text-white{% endif %} rounded-md shadow-sm text-sm font-medium" {% if user.subscription_plan == 'basic' %}disabled{% endif %}>
+                            {% if user.subscription_plan == 'basic' %}Current Plan{% else %}Select Plan{% endif %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Premium Plan -->
+        <div class="relative">
+            <div class="plan-card recommended">
+                <div class="recommended-badge">Recommended</div>
+                <div class="plan-header bg-indigo-600 text-white">
+                    <h3 class="text-xl font-bold">Premium</h3>
+                    <div class="mt-2">
+                        <span class="text-3xl font-bold">$79</span>
+                        <span class="text-indigo-200">/month</span>
+                    </div>
+                </div>
+                <div class="plan-features">
+                    <ul class="space-y-3">
+                        <li class="feature-item"><i class="fas fa-check feature-icon"></i> 20,000 emails per month</li>
+                        <li class="feature-item"><i class="fas fa-check feature-icon"></i> Advanced email templates</li>
+                        <li class="feature-item"><i class="fas fa-check feature-icon"></i> Detailed analytics</li>
+                        <li class="feature-item"><i class="fas fa-check feature-icon"></i> Priority email support</li>
+                        <li class="feature-item"><i class="fas fa-check feature-icon"></i> A/B testing</li>
+                        <li class="feature-item"><i class="fas fa-times feature-icon unavailable"></i> Advanced segmentation</li>
+                        <li class="feature-item"><i class="fas fa-times feature-icon unavailable"></i> Dedicated account manager</li>
+                    </ul>
+                </div>
+                <div class="plan-footer">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="plan" value="premium">
+                        <button type="submit" class="w-full px-4 py-2 border {% if user.subscription_plan == 'premium' %}border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed{% else %}border-transparent bg-indigo-600 hover:bg-indigo-700 text-white{% endif %} rounded-md shadow-sm text-sm font-medium" {% if user.subscription_plan == 'premium' %}disabled{% endif %}>
+                            {% if user.subscription_plan == 'premium' %}Current Plan{% else %}Select Plan{% endif %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enterprise Plan -->
+        <div class="relative">
+            <div class="plan-card {% if user.subscription_plan == 'enterprise' %}active{% endif %}">
+                <div class="plan-header bg-gray-50">
+                    <h3 class="text-xl font-bold text-gray-800">Enterprise</h3>
+                    <div class="mt-2">
+                        <span class="text-3xl font-bold text-gray-900">$199</span>
+                        <span class="text-gray-500">/month</span>
+                    </div>
+                </div>
+                <div class="plan-features">
+                    <ul class="space-y-3">
+                        <li class="feature-item"><i class="fas fa-check feature-icon"></i> 100,000 emails per month</li>
+                        <li class="feature-item"><i class="fas fa-check feature-icon"></i> Premium email templates</li>
+                        <li class="feature-item"><i class="fas fa-check feature-icon"></i> Advanced analytics & reporting</li>
+                        <li class="feature-item"><i class="fas fa-check feature-icon"></i> 24/7 priority support</li>
+                        <li class="feature-item"><i class="fas fa-check feature-icon"></i> Advanced A/B testing</li>
+                        <li class="feature-item"><i class="fas fa-check feature-icon"></i> Advanced segmentation</li>
+                        <li class="feature-item"><i class="fas fa-check feature-icon"></i> Dedicated account manager</li>
+                    </ul>
+                </div>
+                <div class="plan-footer">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="plan" value="enterprise">
+                        <button type="submit" class="w-full px-4 py-2 border {% if user.subscription_plan == 'enterprise' %}border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed{% else %}border-transparent bg-indigo-600 hover:bg-indigo-700 text-white{% endif %} rounded-md shadow-sm text-sm font-medium" {% if user.subscription_plan == 'enterprise' %}disabled{% endif %}>
+                            {% if user.subscription_plan == 'enterprise' %}Current Plan{% else %}Select Plan{% endif %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ Section -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
+        <div class="px-4 py-5 sm:px-6">
+            <h2 class="text-lg font-medium text-gray-900">Frequently Asked Questions</h2>
+        </div>
+        <div class="border-t border-gray-200 px-4 py-5 sm:p-6">
+            <dl class="space-y-6">
+                <div>
+                    <dt class="text-base font-medium text-gray-900">How do I change my plan?</dt>
+                    <dd class="mt-2 text-sm text-gray-500">You can upgrade your plan at any time. The new charges will be prorated for the remainder of your billing cycle.</dd>
+                </div>
+                <div>
+                    <dt class="text-base font-medium text-gray-900">What happens if I exceed my email quota?</dt>
+                    <dd class="mt-2 text-sm text-gray-500">If you reach your monthly email limit, you won't be able to send more emails until your quota resets or you upgrade your plan.</dd>
+                </div>
+                <div>
+                    <dt class="text-base font-medium text-gray-900">Can I cancel my subscription?</dt>
+                    <dd class="mt-2 text-sm text-gray-500">Yes, you can cancel your subscription at any time from your account settings. Your plan will remain active until the end of your billing period.</dd>
+                </div>
+                <div>
+                    <dt class="text-base font-medium text-gray-900">Do you offer custom plans?</dt>
+                    <dd class="mt-2 text-sm text-gray-500">Yes, if you need a custom solution, please contact our sales team at <a href="mailto:sales@emailpro.com" class="text-indigo-600 hover:text-indigo-800">sales@emailpro.com</a>.</dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+</div>
+{% endblock %} 

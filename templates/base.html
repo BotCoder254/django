@@ -68,6 +68,7 @@
                 
                 {% if user.is_authenticated %}
                     <a href="{% url 'dashboard' %}" class="text-gray-600 hover:text-indigo-600 transition-colors">Dashboard</a>
+                    <a href="{% url 'ab_testing' %}" class="text-gray-600 hover:text-indigo-600 transition-colors">A/B Testing</a>
                 {% endif %}
             </nav>
             
@@ -152,6 +153,7 @@
                 
                 {% if user.is_authenticated %}
                     <a href="{% url 'dashboard' %}" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">Dashboard</a>
+                    <a href="{% url 'ab_testing' %}" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">A/B Testing</a>
                     <a href="{% url 'profile' %}" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">Profile</a>
                     <a href="{% url 'subscription' %}" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">Subscription</a>
                     <a href="{% url 'logout' %}" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">Logout</a>

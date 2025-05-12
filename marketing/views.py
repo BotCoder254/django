@@ -86,6 +86,38 @@ def contact(request):
     
     return render(request, 'marketing/contact.html', {'form': form})
 
+@login_required
+def ab_testing(request):
+    """
+    View to display all A/B tests
+    """
+    # Get all A/B tests for the current user
+    ab_tests = ABTestCampaign.objects.filter(owner=request.user).order_by('-created_at')
+    
+    # Search functionality
+    search_query = request.GET.get('search', '')
+    if search_query:
+        ab_tests = ab_tests.filter(name__icontains=search_query)
+    
+    # Status filter
+    status_filter = request.GET.get('status', '')
+    if status_filter and status_filter != 'all':
+        ab_tests = ab_tests.filter(status=status_filter)
+    
+    # Pagination
+    paginator = Paginator(ab_tests, 10)  # Show 10 tests per page
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'total_count': ab_tests.count(),
+    }
+    
+    return render(request, 'marketing/ab_testing.html', context)
+
 # Dashboard view
 @login_required
 def dashboard(request):

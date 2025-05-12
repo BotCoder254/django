@@ -26,6 +26,7 @@ urlpatterns = [
     path('api/upload-template-asset/', views.upload_template_asset, name='upload_template_asset'),
     
     # A/B Testing
+    path('ab-testing/', views.ab_testing, name='ab_testing'),
     path('ab-tests/create/', views.create_ab_test, name='create_ab_test'),
     path('ab-tests/<int:pk>/', views.ab_test_detail, name='ab_test_detail'),
     path('ab-tests/<int:pk>/edit/', views.edit_ab_test, name='edit_ab_test'),
@@ -72,4 +73,4 @@ urlpatterns = [
     path('campaigns/<int:pk>/cancel/', views.cancel_campaign, name='cancel_campaign'),
     path('campaigns/<int:pk>/send/', views.send_campaign, name='send_campaign'),
     path('campaigns/<int:pk>/analytics/', views.campaign_analytics, name='campaign_analytics'),
-] 
+]
