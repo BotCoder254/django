@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load user_tags %}
+
+{% block title %}Add Email Template - EmailPro{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="md:flex md:items-center md:justify-between mb-6">
+        <div class="flex-1 min-w-0">
+            <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+                Add Email Template
+            </h2>
+            <p class="mt-1 text-sm text-gray-500">
+                Create a reusable template for your email campaigns
+            </p>
+        </div>
+        <div class="mt-4 flex md:mt-0 md:ml-4">
+            <a href="{% url 'email_templates' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Templates
+            </a>
+        </div>
+    </div>
+    
+    <!-- Template Form -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                    <div class="rounded-md bg-red-50 p-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-exclamation-circle text-red-400"></i>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-red-800">There were errors with your submission</h3>
+                                <div class="mt-2 text-sm text-red-700">
+                                    <ul class="list-disc pl-5 space-y-1">
+                                        {% for error in form.non_field_errors %}
+                                            <li>{{ error }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <!-- Template Name -->
+                <div>
+                    <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        Template Name
+                    </label>
+                    <div class="mt-1">
+                        {{ form.name|add_class:"shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" }}
+                    </div>
+                    {% if form.name.errors %}
+                        <p class="mt-2 text-sm text-red-600">
+                            {% for error in form.name.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </p>
+                    {% endif %}
+                </div>
+                
+                <!-- Subject Line -->
+                <div>
+                    <label for="{{ form.subject.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        Subject Line
+                    </label>
+                    <div class="mt-1">
+                        {{ form.subject|add_class:"shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" }}
+                    </div>
+                    {% if form.subject.errors %}
+                        <p class="mt-2 text-sm text-red-600">
+                            {% for error in form.subject.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </p>
+                    {% endif %}
+                </div>
+                
+                <!-- Plain Text Content -->
+                <div>
+                    <label for="{{ form.content.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        Plain Text Content
+                    </label>
+                    <div class="mt-1">
+                        {{ form.content|add_class:"shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" }}
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">Plain text version for email clients that don't support HTML.</p>
+                    {% if form.content.errors %}
+                        <p class="mt-2 text-sm text-red-600">
+                            {% for error in form.content.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </p>
+                    {% endif %}
+                </div>
+                
+                <!-- HTML Content -->
+                <div>
+                    <label for="{{ form.html_content.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        HTML Content
+                    </label>
+                    <div class="mt-1">
+                        {{ form.html_content|add_class:"shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" }}
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">
+                        HTML version of your email. You can use the visual editor to create this content.
+                        <a href="{% url 'email_editor' %}" class="text-indigo-600 hover:text-indigo-500" target="_blank">Open Visual Editor</a>
+                    </p>
+                    {% if form.html_content.errors %}
+                        <p class="mt-2 text-sm text-red-600">
+                            {% for error in form.html_content.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </p>
+                    {% endif %}
+                </div>
+                
+                <div class="flex justify-end">
+                    <a href="{% url 'email_templates' %}" class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mr-3">
+                        Cancel
+                    </a>
+                    <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Save Template
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize any additional JS functionality here
+        const htmlEditor = document.getElementById('html-editor');
+        
+        if (htmlEditor) {
+            // Simple textarea auto-resize
+            htmlEditor.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            });
+            
+            // Initialize with current content
+            htmlEditor.style.height = 'auto';
+            htmlEditor.style.height = (htmlEditor.scrollHeight) + 'px';
+        }
+    });
+</script>
+{% endblock %} 

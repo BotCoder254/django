@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load user_tags %}
+
+{% block title %}{{ campaign.name }} - EmailPro{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="md:flex md:items-center md:justify-between mb-6">
+        <div class="flex-1 min-w-0">
+            <div class="flex items-center">
+                <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+                    {{ campaign.name }}
+                </h2>
+                <span class="ml-3 inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium
+                    {% if campaign.status == 'draft' %}bg-gray-100 text-gray-800
+                    {% elif campaign.status == 'scheduled' %}bg-yellow-100 text-yellow-800
+                    {% elif campaign.status == 'sending' %}bg-blue-100 text-blue-800
+                    {% elif campaign.status == 'sent' %}bg-green-100 text-green-800
+                    {% elif campaign.status == 'cancelled' %}bg-red-100 text-red-800{% endif %}">
+                    {{ campaign.get_status_display }}
+                </span>
+            </div>
+            <p class="mt-1 text-sm text-gray-500">
+                Subject: {{ campaign.subject }}
+            </p>
+        </div>
+        <div class="mt-4 flex flex-wrap gap-2 md:mt-0 md:ml-4">
+            {% if campaign.status == 'draft' %}
+            <a href="{% url 'edit_campaign' pk=campaign.pk %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <i class="fas fa-edit mr-2"></i> Edit
+            </a>
+            <a href="{% url 'schedule_campaign' pk=campaign.pk %}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <i class="fas fa-calendar mr-2"></i> Schedule
+            </a>
+            <a href="{% url 'send_campaign' pk=campaign.pk %}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                <i class="fas fa-paper-plane mr-2"></i> Send Now
+            </a>
+            {% elif campaign.status == 'scheduled' %}
+            <a href="{% url 'schedule_campaign' pk=campaign.pk %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <i class="fas fa-edit mr-2"></i> Reschedule
+            </a>
+            <a href="{% url 'send_campaign' pk=campaign.pk %}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                <i class="fas fa-paper-plane mr-2"></i> Send Now
+            </a>
+            {% endif %}
+            {% if campaign.status == 'sent' %}
+            <a href="{% url 'campaign_analytics' pk=campaign.pk %}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <i class="fas fa-chart-bar mr-2"></i> View Analytics
+            </a>
+            {% endif %}
+            <a href="{% url 'campaigns' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Campaigns
+            </a>
+        </div>
+    </div>
+
+    <!-- Campaign Details -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Campaign Details</h3>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">Information about this email campaign.</p>
+        </div>
+        <div class="border-t border-gray-200">
+            <dl>
+                <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <dt class="text-sm font-medium text-gray-500">Campaign name</dt>
+                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ campaign.name }}</dd>
+                </div>
+                <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <dt class="text-sm font-medium text-gray-500">Subject line</dt>
+                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ campaign.subject }}</dd>
+                </div>
+                <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <dt class="text-sm font-medium text-gray-500">From</dt>
+                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ campaign.from_name }} &lt;{{ campaign.from_email }}&gt;</dd>
+                </div>
+                <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <dt class="text-sm font-medium text-gray-500">Reply-to</dt>
+                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ campaign.reply_to|default:"Same as from address" }}</dd>
+                </div>
+                <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <dt class="text-sm font-medium text-gray-500">Status</dt>
+                    <dd class="mt-1 text-sm sm:mt-0 sm:col-span-2">
+                        <span class="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium
+                            {% if campaign.status == 'draft' %}bg-gray-100 text-gray-800
+                            {% elif campaign.status == 'scheduled' %}bg-yellow-100 text-yellow-800
+                            {% elif campaign.status == 'sending' %}bg-blue-100 text-blue-800
+                            {% elif campaign.status == 'sent' %}bg-green-100 text-green-800
+                            {% elif campaign.status == 'cancelled' %}bg-red-100 text-red-800{% endif %}">
+                            {{ campaign.get_status_display }}
+                        </span>
+                    </dd>
+                </div>
+                <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <dt class="text-sm font-medium text-gray-500">Created at</dt>
+                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ campaign.created_at|date:"M d, Y H:i" }}</dd>
+                </div>
+                {% if campaign.status == 'scheduled' %}
+                <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <dt class="text-sm font-medium text-gray-500">Scheduled time</dt>
+                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ campaign.schedule_time|date:"M d, Y H:i" }}</dd>
+                </div>
+                {% endif %}
+                {% if campaign.status == 'sent' %}
+                <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <dt class="text-sm font-medium text-gray-500">Sent time</dt>
+                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ campaign.sent_time|date:"M d, Y H:i" }}</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+
+    <!-- Subscriber Lists -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Subscriber Lists</h3>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">Recipients of this campaign.</p>
+        </div>
+        <div class="border-t border-gray-200">
+            <ul class="divide-y divide-gray-200">
+                {% for list in lists %}
+                <li class="px-4 py-4 sm:px-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                                    <i class="fas fa-users text-indigo-600"></i>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-900">{{ list.name }}</p>
+                                <p class="text-sm text-gray-500">{{ list.subscribers.count }} subscribers</p>
+                            </div>
+                        </div>
+                        <div>
+                            <a href="{% url 'subscriber_list_detail' pk=list.pk %}" class="text-indigo-600 hover:text-indigo-900 text-sm font-medium">View</a>
+                        </div>
+                    </div>
+                </li>
+                {% empty %}
+                <li class="px-4 py-4 sm:px-6 text-center">
+                    <p class="text-sm text-gray-500">No subscriber lists selected.</p>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Analytics Overview (if sent) -->
+    {% if campaign.status == 'sent' %}
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
+        <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+            <div>
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Performance Overview</h3>
+                <p class="mt-1 max-w-2xl text-sm text-gray-500">Key metrics for this campaign.</p>
+            </div>
+            <a href="{% url 'campaign_analytics' pk=campaign.pk %}" class="text-indigo-600 hover:text-indigo-900 text-sm font-medium">
+                View Detailed Analytics <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+        <div class="border-t border-gray-200">
+            <div class="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-gray-200">
+                <div class="p-6 text-center">
+                    <p class="text-sm font-medium text-gray-500">Sent</p>
+                    <p class="mt-1 text-3xl font-semibold text-gray-900">{{ analytics.sent_count }}</p>
+                </div>
+                <div class="p-6 text-center">
+                    <p class="text-sm font-medium text-gray-500">Opened</p>
+                    <p class="mt-1 text-3xl font-semibold text-gray-900">{{ analytics.open_count }}</p>
+                    <p class="text-sm text-gray-500">{{ analytics.open_rate|floatformat:1 }}% open rate</p>
+                </div>
+                <div class="p-6 text-center">
+                    <p class="text-sm font-medium text-gray-500">Clicked</p>
+                    <p class="mt-1 text-3xl font-semibold text-gray-900">{{ analytics.click_count }}</p>
+                    <p class="text-sm text-gray-500">{{ analytics.click_rate|floatformat:1 }}% click rate</p>
+                </div>
+                <div class="p-6 text-center">
+                    <p class="text-sm font-medium text-gray-500">Bounced</p>
+                    <p class="mt-1 text-3xl font-semibold text-gray-900">{{ analytics.bounce_count }}</p>
+                    <p class="text-sm text-gray-500">{{ analytics.bounce_rate|floatformat:1 }}% bounce rate</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Email Preview -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Email Preview</h3>
+            <div class="mt-1 flex justify-between items-center">
+                <p class="max-w-2xl text-sm text-gray-500">Preview of the email content.</p>
+                <div class="flex space-x-3">
+                    <button id="toggle-view" class="text-sm font-medium text-indigo-600 hover:text-indigo-900">
+                        <span id="html-label">View HTML</span>
+                        <span id="text-label" class="hidden">View Plain Text</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="border-t border-gray-200">
+            <!-- HTML Preview -->
+            <div id="html-preview" class="p-4 bg-white rounded-b-lg">
+                <div class="border border-gray-200 rounded-lg p-4 min-h-[300px] bg-gray-50">
+                    <div class="max-w-2xl mx-auto">
+                        {{ campaign.html_content|safe }}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Text Preview -->
+            <div id="text-preview" class="hidden p-4 bg-white rounded-b-lg">
+                <div class="border border-gray-200 rounded-lg p-4 min-h-[300px] bg-gray-50">
+                    <pre class="whitespace-pre-wrap font-mono text-sm text-gray-800">{{ campaign.content }}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle between HTML and plain text views
+        const toggleButton = document.getElementById('toggle-view');
+        const htmlPreview = document.getElementById('html-preview');
+        const textPreview = document.getElementById('text-preview');
+        const htmlLabel = document.getElementById('html-label');
+        const textLabel = document.getElementById('text-label');
+        
+        if (toggleButton) {
+            toggleButton.addEventListener('click', function() {
+                htmlPreview.classList.toggle('hidden');
+                textPreview.classList.toggle('hidden');
+                htmlLabel.classList.toggle('hidden');
+                textLabel.classList.toggle('hidden');
+            });
+        }
+    });
+</script>
+{% endblock %} 

@@ -1,0 +1,252 @@
+{% extends 'base.html' %}
+
+{% block title %}EmailPro - Modern Email Marketing Platform{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="py-12 md:py-20">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+        <div class="animate-fade-in">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-6">Powerful Email Marketing Made Simple</h1>
+            <p class="text-xl text-gray-600 mb-8">
+                Create, send, and analyze email campaigns that drive results. Engage your audience like never before.
+            </p>
+            <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                <a href="{% url 'register' %}" class="px-6 py-3 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors text-center">
+                    Start Free Trial
+                </a>
+                <a href="{% url 'features' %}" class="px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-md hover:border-indigo-500 hover:text-indigo-600 transition-colors text-center">
+                    Explore Features
+                </a>
+            </div>
+            <p class="mt-6 text-sm text-gray-500">No credit card required. Free 14-day trial.</p>
+        </div>
+        <div class="gsap-fade-in">
+            <img src="https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Email Marketing Dashboard" class="rounded-xl shadow-xl">
+        </div>
+    </div>
+</section>
+
+<!-- Brands Section -->
+<section class="py-10 bg-gray-100">
+    <div class="text-center mb-8">
+        <p class="text-gray-600 font-medium">Trusted by companies worldwide</p>
+    </div>
+    <div class="flex flex-wrap justify-center items-center gap-8 md:gap-16 grayscale opacity-70">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Google_2015_logo.svg/272px-Google_2015_logo.svg.png" alt="Google" class="h-8">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Slack_Technologies_Logo.svg/2560px-Slack_Technologies_Logo.svg.png" alt="Slack" class="h-8">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Microsoft_logo_%282012%29.svg/2560px-Microsoft_logo_%282012%29.svg.png" alt="Microsoft" class="h-8">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Amazon_logo.svg/2560px-Amazon_logo.svg.png" alt="Amazon" class="h-8">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Shopify_logo.svg/2560px-Shopify_logo.svg.png" alt="Shopify" class="h-8">
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-16 md:py-24">
+    <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4 gsap-fade-in">Everything You Need to Succeed</h2>
+        <p class="text-xl text-gray-600 max-w-3xl mx-auto gsap-fade-in">Our platform offers all the tools you need to create, send, and analyze effective email campaigns.</p>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <!-- Feature 1 -->
+        <div class="bg-white p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow gsap-fade-in">
+            <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-6">
+                <i class="fas fa-paint-brush text-indigo-600 text-xl"></i>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-3">Beautiful Templates</h3>
+            <p class="text-gray-600">Choose from dozens of professionally designed email templates or create your own with our easy-to-use drag-and-drop editor.</p>
+        </div>
+        
+        <!-- Feature 2 -->
+        <div class="bg-white p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow gsap-fade-in">
+            <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-6">
+                <i class="fas fa-chart-line text-indigo-600 text-xl"></i>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-3">Advanced Analytics</h3>
+            <p class="text-gray-600">Track opens, clicks, conversions and more with our comprehensive analytics dashboard. Make data-driven decisions.</p>
+        </div>
+        
+        <!-- Feature 3 -->
+        <div class="bg-white p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow gsap-fade-in">
+            <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-6">
+                <i class="fas fa-user-friends text-indigo-600 text-xl"></i>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-3">Audience Segmentation</h3>
+            <p class="text-gray-600">Target the right people with the right message. Segment your audience based on behavior, preferences, and more.</p>
+        </div>
+        
+        <!-- Feature 4 -->
+        <div class="bg-white p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow gsap-fade-in">
+            <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-6">
+                <i class="fas fa-clock text-indigo-600 text-xl"></i>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-3">Automation Workflows</h3>
+            <p class="text-gray-600">Set up automated email sequences that trigger based on user actions, time delays, or custom conditions.</p>
+        </div>
+        
+        <!-- Feature 5 -->
+        <div class="bg-white p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow gsap-fade-in">
+            <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-6">
+                <i class="fas fa-rocket text-indigo-600 text-xl"></i>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-3">A/B Testing</h3>
+            <p class="text-gray-600">Optimize your campaigns by testing different subject lines, content, and designs to see what performs best.</p>
+        </div>
+        
+        <!-- Feature 6 -->
+        <div class="bg-white p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow gsap-fade-in">
+            <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-6">
+                <i class="fas fa-plug text-indigo-600 text-xl"></i>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-3">Seamless Integrations</h3>
+            <p class="text-gray-600">Connect with your favorite tools and platforms including CRM systems, e-commerce platforms, and more.</p>
+        </div>
+    </div>
+    
+    <div class="text-center mt-12">
+        <a href="{% url 'features' %}" class="px-6 py-3 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition-colors inline-block">
+            See All Features
+        </a>
+    </div>
+</section>
+
+<!-- How It Works Section -->
+<section class="py-16 md:py-24 bg-gradient-to-br from-indigo-50 to-indigo-100">
+    <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4 gsap-fade-in">How EmailPro Works</h2>
+        <p class="text-xl text-gray-600 max-w-3xl mx-auto gsap-fade-in">Create, send, and analyze email campaigns in just a few simple steps.</p>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+        <!-- Step 1 -->
+        <div class="flex flex-col items-center text-center gsap-fade-in">
+            <div class="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mb-6">1</div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-3">Build Your List</h3>
+            <p class="text-gray-600">Import your existing contacts or use our landing page templates to start collecting subscribers.</p>
+        </div>
+        
+        <!-- Step 2 -->
+        <div class="flex flex-col items-center text-center gsap-fade-in">
+            <div class="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mb-6">2</div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-3">Create Your Campaign</h3>
+            <p class="text-gray-600">Design beautiful emails using our drag-and-drop editor or choose from our library of templates.</p>
+        </div>
+        
+        <!-- Step 3 -->
+        <div class="flex flex-col items-center text-center gsap-fade-in">
+            <div class="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mb-6">3</div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-3">Analyze & Optimize</h3>
+            <p class="text-gray-600">Track performance in real-time and use insights to improve your future campaigns.</p>
+        </div>
+    </div>
+    
+    <div class="mt-16 text-center">
+        <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" alt="EmailPro Dashboard" class="mx-auto rounded-xl shadow-xl max-w-4xl w-full gsap-fade-in">
+    </div>
+</section>
+
+<!-- Testimonials Section -->
+<section class="py-16 md:py-24">
+    <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4 gsap-fade-in">What Our Customers Say</h2>
+        <p class="text-xl text-gray-600 max-w-3xl mx-auto gsap-fade-in">Join thousands of satisfied customers who are growing their businesses with EmailPro.</p>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <!-- Testimonial 1 -->
+        <div class="bg-white p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow gsap-fade-in">
+            <div class="flex items-center mb-6">
+                <img src="https://randomuser.me/api/portraits/women/12.jpg" alt="Customer" class="w-12 h-12 rounded-full mr-4">
+                <div>
+                    <h4 class="font-semibold text-gray-900">Sarah Johnson</h4>
+                    <p class="text-sm text-gray-600">Marketing Manager, TechCorp</p>
+                </div>
+            </div>
+            <p class="text-gray-600 mb-4">"EmailPro has completely transformed our email marketing efforts. The intuitive interface and powerful analytics have helped us increase open rates by 35%."</p>
+            <div class="flex text-yellow-400">
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+            </div>
+        </div>
+        
+        <!-- Testimonial 2 -->
+        <div class="bg-white p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow gsap-fade-in">
+            <div class="flex items-center mb-6">
+                <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Customer" class="w-12 h-12 rounded-full mr-4">
+                <div>
+                    <h4 class="font-semibold text-gray-900">James Wilson</h4>
+                    <p class="text-sm text-gray-600">Founder, Wilson & Co</p>
+                </div>
+            </div>
+            <p class="text-gray-600 mb-4">"As a small business owner, I needed a solution that was both powerful and easy to use. EmailPro delivered on both fronts and has been a game-changer for our customer engagement."</p>
+            <div class="flex text-yellow-400">
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+            </div>
+        </div>
+        
+        <!-- Testimonial 3 -->
+        <div class="bg-white p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow gsap-fade-in">
+            <div class="flex items-center mb-6">
+                <img src="https://randomuser.me/api/portraits/women/28.jpg" alt="Customer" class="w-12 h-12 rounded-full mr-4">
+                <div>
+                    <h4 class="font-semibold text-gray-900">Amanda Chen</h4>
+                    <p class="text-sm text-gray-600">E-commerce Director, StyleShop</p>
+                </div>
+            </div>
+            <p class="text-gray-600 mb-4">"The automation features in EmailPro have saved us countless hours. We're now able to run sophisticated email sequences that have increased our conversion rates dramatically."</p>
+            <div class="flex text-yellow-400">
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star-half-alt"></i>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-16 md:py-24 bg-indigo-600 text-white rounded-3xl my-8">
+    <div class="text-center px-4">
+        <h2 class="text-3xl md:text-4xl font-bold mb-6 gsap-fade-in">Ready to Grow Your Business?</h2>
+        <p class="text-xl mb-8 max-w-3xl mx-auto opacity-90 gsap-fade-in">Join thousands of marketers who are using EmailPro to engage their audience and drive results.</p>
+        <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4 gsap-fade-in">
+            <a href="{% url 'register' %}" class="px-8 py-4 bg-white text-indigo-600 font-medium rounded-md hover:bg-gray-100 transition-colors text-center">
+                Start Your Free Trial
+            </a>
+            <a href="{% url 'contact' %}" class="px-8 py-4 border border-white text-white font-medium rounded-md hover:bg-indigo-700 transition-colors text-center">
+                Contact Sales
+            </a>
+        </div>
+        <p class="mt-6 text-sm opacity-80">No credit card required. Free 14-day trial.</p>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Staggered animation for features
+        gsap.utils.toArray('.features-section .gsap-fade-in').forEach((element, index) => {
+            gsap.from(element, {
+                opacity: 0,
+                y: 30,
+                duration: 0.8,
+                delay: index * 0.1,
+                scrollTrigger: {
+                    trigger: element,
+                    start: "top 80%",
+                }
+            });
+        });
+    });
+</script>
+{% endblock %} 

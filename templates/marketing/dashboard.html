@@ -1,0 +1,540 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load user_tags %}
+
+{% block title %}Dashboard - EmailPro{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen">
+    <!-- Dashboard Header -->
+    <div class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex items-center justify-between">
+                <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+                <div>
+                    <a href="{% url 'add_campaign' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <i class="fas fa-plus mr-2"></i> New Campaign
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Date Range Filter -->
+        <div class="mb-8 bg-white p-4 rounded-lg shadow-sm">
+            <div class="flex flex-wrap items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900">Analytics Overview</h2>
+                <div class="mt-2 sm:mt-0">
+                    <div class="flex rounded-md shadow-sm">
+                        <div class="relative flex items-stretch flex-grow">
+                            <input type="text" id="date-range" class="form-control border border-gray-300 rounded-md pl-10 pr-4 py-2 w-72" placeholder="Select date range">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-calendar-alt text-gray-400"></i>
+                            </div>
+                        </div>
+                        <button type="button" id="apply-date-filter" class="-ml-px relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-r-md text-gray-700 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
+                            Apply
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total Campaigns -->
+            <div class="bg-white overflow-hidden shadow-sm rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 bg-indigo-100 rounded-md p-3">
+                            <i class="fas fa-envelope text-indigo-600 text-xl"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">Total Campaigns</dt>
+                                <dd>
+                                    <div class="text-lg font-medium text-gray-900">{{ campaign_count }}</div>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-end justify-between">
+                        <div class="text-sm">
+                            <a href="{% url 'campaigns' %}" class="font-medium text-indigo-600 hover:text-indigo-500">View all</a>
+                        </div>
+                        {% if campaign_growth > 0 %}
+                        <div class="text-sm text-green-600 flex items-center">
+                            <i class="fas fa-arrow-up mr-1"></i> {{ campaign_growth }}%
+                        </div>
+                        {% elif campaign_growth < 0 %}
+                        <div class="text-sm text-red-600 flex items-center">
+                            <i class="fas fa-arrow-down mr-1"></i> {{ campaign_growth|abs }}%
+                        </div>
+                        {% else %}
+                        <div class="text-sm text-gray-500">
+                            0%
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Subscribers -->
+            <div class="bg-white overflow-hidden shadow-sm rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 bg-green-100 rounded-md p-3">
+                            <i class="fas fa-users text-green-600 text-xl"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">Total Subscribers</dt>
+                                <dd>
+                                    <div class="text-lg font-medium text-gray-900">{{ subscriber_count }}</div>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-end justify-between">
+                        <div class="text-sm">
+                            <a href="{% url 'subscriber_list' %}" class="font-medium text-indigo-600 hover:text-indigo-500">View all</a>
+                        </div>
+                        {% if subscriber_growth > 0 %}
+                        <div class="text-sm text-green-600 flex items-center">
+                            <i class="fas fa-arrow-up mr-1"></i> {{ subscriber_growth }}%
+                        </div>
+                        {% elif subscriber_growth < 0 %}
+                        <div class="text-sm text-red-600 flex items-center">
+                            <i class="fas fa-arrow-down mr-1"></i> {{ subscriber_growth|abs }}%
+                        </div>
+                        {% else %}
+                        <div class="text-sm text-gray-500">
+                            0%
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Average Open Rate -->
+            <div class="bg-white overflow-hidden shadow-sm rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 bg-blue-100 rounded-md p-3">
+                            <i class="fas fa-envelope-open text-blue-600 text-xl"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">Avg. Open Rate</dt>
+                                <dd>
+                                    <div class="text-lg font-medium text-gray-900">{{ avg_open_rate|floatformat:1 }}%</div>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-end justify-between">
+                        <div class="text-sm">
+                            <span class="text-gray-500">Industry avg: 20.94%</span>
+                        </div>
+                        {% if open_rate_change > 0 %}
+                        <div class="text-sm text-green-600 flex items-center">
+                            <i class="fas fa-arrow-up mr-1"></i> {{ open_rate_change }}%
+                        </div>
+                        {% elif open_rate_change < 0 %}
+                        <div class="text-sm text-red-600 flex items-center">
+                            <i class="fas fa-arrow-down mr-1"></i> {{ open_rate_change|abs }}%
+                        </div>
+                        {% else %}
+                        <div class="text-sm text-gray-500">
+                            0%
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Average Click Rate -->
+            <div class="bg-white overflow-hidden shadow-sm rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 bg-purple-100 rounded-md p-3">
+                            <i class="fas fa-mouse-pointer text-purple-600 text-xl"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">Avg. Click Rate</dt>
+                                <dd>
+                                    <div class="text-lg font-medium text-gray-900">{{ avg_click_rate|floatformat:1 }}%</div>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-end justify-between">
+                        <div class="text-sm">
+                            <span class="text-gray-500">Industry avg: 2.69%</span>
+                        </div>
+                        {% if click_rate_change > 0 %}
+                        <div class="text-sm text-green-600 flex items-center">
+                            <i class="fas fa-arrow-up mr-1"></i> {{ click_rate_change }}%
+                        </div>
+                        {% elif click_rate_change < 0 %}
+                        <div class="text-sm text-red-600 flex items-center">
+                            <i class="fas fa-arrow-down mr-1"></i> {{ click_rate_change|abs }}%
+                        </div>
+                        {% else %}
+                        <div class="text-sm text-gray-500">
+                            0%
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts and Tables -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Performance Chart -->
+            <div class="lg:col-span-2 bg-white rounded-lg shadow-sm">
+                <div class="px-4 py-5 sm:p-6">
+                    <h2 class="text-lg font-medium text-gray-900 mb-4">Campaign Performance</h2>
+                    <div class="h-80">
+                        <canvas id="emailPerformanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Campaigns -->
+            <div class="bg-white rounded-lg shadow-sm">
+                <div class="px-4 py-5 sm:p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-medium text-gray-900">Recent Campaigns</h2>
+                        <a href="{% url 'campaigns' %}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">View all</a>
+                    </div>
+                    <div class="flow-root">
+                        <ul role="list" class="-my-5 divide-y divide-gray-200">
+                            {% for campaign in recent_campaigns %}
+                            <li class="py-4">
+                                <div class="flex items-center space-x-4">
+                                    <div class="flex-shrink-0">
+                                        <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                                            <i class="fas fa-envelope text-indigo-600"></i>
+                                        </div>
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-sm font-medium text-gray-900 truncate">
+                                            {{ campaign.name }}
+                                        </p>
+                                        <p class="text-sm text-gray-500 truncate">
+                                            {% if campaign.status == 'sent' %}
+                                                Sent {{ campaign.sent_time|date:"M d, Y" }}
+                                            {% elif campaign.status == 'scheduled' %}
+                                                Scheduled for {{ campaign.schedule_time|date:"M d, Y H:i" }}
+                                            {% else %}
+                                                {{ campaign.status|title }}
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <a href="{% url 'campaign_detail' pk=campaign.pk %}" class="inline-flex items-center shadow-sm px-2.5 py-0.5 border border-gray-300 text-sm leading-5 font-medium rounded-full text-gray-700 bg-white hover:bg-gray-50">
+                                            View
+                                        </a>
+                                    </div>
+                                </div>
+                            </li>
+                            {% empty %}
+                            <li class="py-4">
+                                <div class="text-center text-gray-500">
+                                    No campaigns yet. <a href="{% url 'add_campaign' %}" class="text-indigo-600 hover:text-indigo-500">Create one</a>.
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity and Recommendations -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+            <!-- Activity Timeline -->
+            <div class="lg:col-span-2 bg-white rounded-lg shadow-sm">
+                <div class="px-4 py-5 sm:p-6">
+                    <h2 class="text-lg font-medium text-gray-900 mb-4">Recent Activity</h2>
+                    <div class="flow-root">
+                        <ul role="list" class="-mb-8">
+                            {% for activity in recent_activities %}
+                            <li>
+                                <div class="relative pb-8">
+                                    {% if not forloop.last %}
+                                    <span class="absolute top-5 left-5 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></span>
+                                    {% endif %}
+                                    <div class="relative flex items-start space-x-3">
+                                        <div class="relative">
+                                            <div class="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center ring-8 ring-white">
+                                                {% if activity.action == 'campaign_created' %}
+                                                <i class="fas fa-plus text-green-500"></i>
+                                                {% elif activity.action == 'campaign_sent' %}
+                                                <i class="fas fa-paper-plane text-blue-500"></i>
+                                                {% elif activity.action == 'subscriber_added' %}
+                                                <i class="fas fa-user-plus text-indigo-500"></i>
+                                                {% elif activity.action == 'template_created' %}
+                                                <i class="fas fa-file-alt text-purple-500"></i>
+                                                {% else %}
+                                                <i class="fas fa-check text-gray-500"></i>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <div>
+                                                <div class="text-sm text-gray-800">
+                                                    {{ activity.description }}
+                                                </div>
+                                                <p class="mt-0.5 text-sm text-gray-500">
+                                                    {{ activity.timestamp|timesince }} ago
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </li>
+                            {% empty %}
+                            <li class="text-center text-gray-500 py-4">
+                                No recent activity to display.
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recommendations -->
+            <div class="bg-white rounded-lg shadow-sm">
+                <div class="px-4 py-5 sm:p-6">
+                    <h2 class="text-lg font-medium text-gray-900 mb-4">Recommendations</h2>
+                    <div class="space-y-4">
+                        {% if subscriber_count < 10 %}
+                        <div class="bg-blue-50 p-4 rounded-md">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-info-circle text-blue-600"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <h3 class="text-sm font-medium text-blue-800">Grow your subscriber base</h3>
+                                    <div class="mt-2 text-sm text-blue-700">
+                                        <p>Import your existing contacts or create a signup form.</p>
+                                    </div>
+                                    <div class="mt-3">
+                                        <div class="flex space-x-3">
+                                            <a href="{% url 'import_subscribers' %}" class="text-sm font-medium text-blue-600 hover:text-blue-500">
+                                                Import contacts <span aria-hidden="true">&rarr;</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if template_count < 1 %}
+                        <div class="bg-indigo-50 p-4 rounded-md">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-palette text-indigo-600"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <h3 class="text-sm font-medium text-indigo-800">Create email templates</h3>
+                                    <div class="mt-2 text-sm text-indigo-700">
+                                        <p>Save time by creating reusable email templates.</p>
+                                    </div>
+                                    <div class="mt-3">
+                                        <div class="flex space-x-3">
+                                            <a href="{% url 'add_email_template' %}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                                                Create template <span aria-hidden="true">&rarr;</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if campaign_count < 1 %}
+                        <div class="bg-green-50 p-4 rounded-md">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-rocket text-green-600"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <h3 class="text-sm font-medium text-green-800">Send your first campaign</h3>
+                                    <div class="mt-2 text-sm text-green-700">
+                                        <p>Create and send your first email campaign.</p>
+                                    </div>
+                                    <div class="mt-3">
+                                        <div class="flex space-x-3">
+                                            <a href="{% url 'add_campaign' %}" class="text-sm font-medium text-green-600 hover:text-green-500">
+                                                Create campaign <span aria-hidden="true">&rarr;</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if not has_subscription %}
+                        <div class="bg-purple-50 p-4 rounded-md">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-crown text-purple-600"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <h3 class="text-sm font-medium text-purple-800">Upgrade your plan</h3>
+                                    <div class="mt-2 text-sm text-purple-700">
+                                        <p>Get more features and increase sending limits.</p>
+                                    </div>
+                                    <div class="mt-3">
+                                        <div class="flex space-x-3">
+                                            <a href="{% url 'upgrade_subscription' %}" class="text-sm font-medium text-purple-600 hover:text-purple-500">
+                                                View plans <span aria-hidden="true">&rarr;</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if subscriber_count > 0 and list_count < 1 %}
+                        <div class="bg-yellow-50 p-4 rounded-md">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-tags text-yellow-600"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <h3 class="text-sm font-medium text-yellow-800">Organize your subscribers</h3>
+                                    <div class="mt-2 text-sm text-yellow-700">
+                                        <p>Create lists to segment your subscribers.</p>
+                                    </div>
+                                    <div class="mt-3">
+                                        <div class="flex space-x-3">
+                                            <a href="{% url 'add_subscriber_list' %}" class="text-sm font-medium text-yellow-600 hover:text-yellow-500">
+                                                Create list <span aria-hidden="true">&rarr;</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize date picker
+    const datePicker = flatpickr("#date-range", {
+        mode: "range",
+        dateFormat: "Y-m-d",
+        defaultDate: [new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), new Date()],
+        maxDate: "today"
+    });
+
+    // Apply date filter button
+    document.getElementById('apply-date-filter').addEventListener('click', function() {
+        const selectedDates = datePicker.selectedDates;
+        if (selectedDates.length === 2) {
+            const startDate = selectedDates[0].toISOString().split('T')[0];
+            const endDate = selectedDates[1].toISOString().split('T')[0];
+            window.location.href = `{% url 'dashboard' %}?start_date=${startDate}&end_date=${endDate}`;
+        }
+    });
+
+    // Initialize Chart.js performance chart
+    const ctx = document.getElementById('emailPerformanceChart').getContext('2d');
+    
+    // Parse data from Django template
+    const chartDates = JSON.parse('{{ chart_dates|escapejs }}');
+    const openRates = JSON.parse('{{ open_rates|escapejs }}');
+    const clickRates = JSON.parse('{{ click_rates|escapejs }}');
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartDates,
+            datasets: [
+                {
+                    label: 'Open Rate (%)',
+                    data: openRates,
+                    borderColor: '#4CAF50',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: 'Click Rate (%)',
+                    data: clickRates,
+                    borderColor: '#2196F3',
+                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Rate (%)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + '%';
+                        }
+                    }
+                },
+                legend: {
+                    position: 'top'
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %} 

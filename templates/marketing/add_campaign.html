@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load user_tags %}
+
+{% block title %}Create Campaign - EmailPro{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="md:flex md:items-center md:justify-between mb-6">
+        <div class="flex-1 min-w-0">
+            <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+                Create New Campaign
+            </h2>
+        </div>
+        <div class="mt-4 flex md:mt-0 md:ml-4">
+            <a href="{% url 'campaigns' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Campaigns
+            </a>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white shadow-sm rounded-lg p-6">
+        <form method="post">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="bg-red-50 p-4 rounded-md mb-6">
+                    <div class="text-sm text-red-700">
+                        {% for error in form.non_field_errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+            
+            <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                <!-- Campaign name -->
+                <div class="sm:col-span-6">
+                    <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        Campaign Name *
+                    </label>
+                    {{ form.name|add_class:"mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" }}
+                    {% if form.name.errors %}
+                        <div class="text-red-600 text-sm mt-1">
+                            {% for error in form.name.errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Subject line -->
+                <div class="sm:col-span-6">
+                    <label for="{{ form.subject.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        Email Subject *
+                    </label>
+                    {{ form.subject|add_class:"mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" }}
+                    {% if form.subject.errors %}
+                        <div class="text-red-600 text-sm mt-1">
+                            {% for error in form.subject.errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Sender Info -->
+                <div class="sm:col-span-3">
+                    <label for="{{ form.from_name.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        From Name *
+                    </label>
+                    {{ form.from_name|add_class:"mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" }}
+                    {% if form.from_name.errors %}
+                        <div class="text-red-600 text-sm mt-1">
+                            {% for error in form.from_name.errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="sm:col-span-3">
+                    <label for="{{ form.from_email.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        From Email *
+                    </label>
+                    {{ form.from_email|add_class:"mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" }}
+                    {% if form.from_email.errors %}
+                        <div class="text-red-600 text-sm mt-1">
+                            {% for error in form.from_email.errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Reply-to -->
+                <div class="sm:col-span-6">
+                    <label for="{{ form.reply_to.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        Reply-To Email (optional)
+                    </label>
+                    {{ form.reply_to|add_class:"mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" }}
+                    {% if form.reply_to.errors %}
+                        <div class="text-red-600 text-sm mt-1">
+                            {% for error in form.reply_to.errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Content -->
+                <div class="sm:col-span-6">
+                    <label for="{{ form.content.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        Plain Text Content (for recipients who can't view HTML)
+                    </label>
+                    {{ form.content|add_class:"mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" }}
+                    {% if form.content.errors %}
+                        <div class="text-red-600 text-sm mt-1">
+                            {% for error in form.content.errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- HTML Content -->
+                <div class="sm:col-span-6">
+                    <label for="{{ form.html_content.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        HTML Content *
+                    </label>
+                    <div class="mt-1">
+                        <a href="{% url 'email_editor' %}" class="text-indigo-600 hover:text-indigo-800 text-sm">
+                            <i class="fas fa-palette mr-1"></i> Use the Email Editor
+                        </a>
+                    </div>
+                    {{ form.html_content|add_class:"mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" }}
+                    {% if form.html_content.errors %}
+                        <div class="text-red-600 text-sm mt-1">
+                            {% for error in form.html_content.errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Template -->
+                <div class="sm:col-span-6">
+                    <label for="{{ form.template.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        Use Template (optional)
+                    </label>
+                    {{ form.template|add_class:"mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" }}
+                    {% if form.template.errors %}
+                        <div class="text-red-600 text-sm mt-1">
+                            {% for error in form.template.errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-500">Select a template to pre-fill content.</p>
+                </div>
+                
+                <!-- Lists -->
+                <div class="sm:col-span-6">
+                    <label for="{{ form.lists.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        Subscriber Lists *
+                    </label>
+                    {{ form.lists|add_class:"mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" }}
+                    {% if form.lists.errors %}
+                        <div class="text-red-600 text-sm mt-1">
+                            {% for error in form.lists.errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-500">Select the subscriber lists to send this campaign to.</p>
+                </div>
+            </div>
+            
+            <div class="mt-8 border-t border-gray-200 pt-8 flex justify-end">
+                <button type="submit" class="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Create Campaign
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const templateSelect = document.getElementById('{{ form.template.id_for_label }}');
+        const htmlContentField = document.getElementById('{{ form.html_content.id_for_label }}');
+        const contentField = document.getElementById('{{ form.content.id_for_label }}');
+        
+        if (templateSelect && htmlContentField) {
+            templateSelect.addEventListener('change', function() {
+                const templateId = this.value;
+                if (templateId) {
+                    // Fetch template content
+                    fetch(`/api/get-template-content/${templateId}/`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                htmlContentField.value = data.html_content;
+                                if (contentField && data.content) {
+                                    contentField.value = data.content;
+                                }
+                            }
+                        })
+                        .catch(error => console.error('Error fetching template:', error));
+                }
+            });
+        }
+    });
+</script>
+{% endblock %} 

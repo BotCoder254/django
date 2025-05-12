@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create A/B Test Campaign{% endblock %}
+
+{% block extra_css %}
+<style>
+  .test-type-card {
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+  }
+  .test-type-card:hover {
+    transform: translateY(-5px);
+  }
+  .test-type-card.selected {
+    border-color: #3B82F6;
+    box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
+  }
+  .condition-row {
+    margin-bottom: 1rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-800">Create A/B Test Campaign</h1>
+    <p class="text-gray-600 mt-2">Test different variants to optimize your campaign performance</p>
+  </div>
+
+  <form method="post" class="bg-white rounded-lg shadow-md p-6">
+    {% csrf_token %}
+    
+    <!-- Basic Information -->
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b">Basic Information</h2>
+      
+      <div class="mb-4">
+        <label for="name" class="block text-sm font-medium text-gray-700">Campaign Name</label>
+        <input type="text" name="name" id="name" required 
+               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+      </div>
+      
+      <div class="mb-4">
+        <label for="description" class="block text-sm font-medium text-gray-700">Description (Optional)</label>
+        <textarea name="description" id="description" rows="2"
+                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+      </div>
+    </div>
+    
+    <!-- Test Type Selection -->
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b">What do you want to test?</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+        {% for type_code, type_name in test_types %}
+        <div class="test-type-card bg-white rounded-lg border p-4 cursor-pointer" data-test-type="{{ type_code }}">
+          <input type="radio" name="test_type" id="test_type_{{ type_code }}" value="{{ type_code }}" class="hidden" {% if forloop.first %}checked{% endif %}>
+          <div class="mb-3 text-center">
+            <div class="mx-auto w-12 h-12 flex items-center justify-center bg-blue-100 text-blue-600 rounded-full">
+              {% if type_code == 'subject' %}
+                <i class="fas fa-heading"></i>
+              {% elif type_code == 'content' %}
+                <i class="fas fa-file-alt"></i>
+              {% elif type_code == 'sender' %}
+                <i class="fas fa-user"></i>
+              {% elif type_code == 'time' %}
+                <i class="fas fa-clock"></i>
+              {% endif %}
+            </div>
+          </div>
+          <h3 class="font-medium text-center">{{ type_name }}</h3>
+          <p class="text-sm text-gray-500 text-center mt-2">
+            {% if type_code == 'subject' %}
+              Test different subject lines to see which gets more opens
+            {% elif type_code == 'content' %}
+              Test different email content or designs
+            {% elif type_code == 'sender' %}
+              Test different sender names or email addresses
+            {% elif type_code == 'time' %}
+              Test different sending times
+            {% endif %}
+          </p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    
+    <!-- Audience Selection -->
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b">Select Your Audience</h2>
+      
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Subscriber Lists</label>
+        {% if subscriber_lists %}
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for list in subscriber_lists %}
+            <div class="flex items-start">
+              <div class="flex items-center h-5">
+                <input id="list_{{ list.id }}" name="lists" value="{{ list.id }}" type="checkbox" 
+                       class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
+              </div>
+              <div class="ml-3 text-sm">
+                <label for="list_{{ list.id }}" class="font-medium text-gray-700">{{ list.name }}</label>
+                <p class="text-gray-500">{{ list.subscribers.count }} subscribers</p>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-gray-500">No subscriber lists available. <a href="{% url 'create_subscriber_list' %}" class="text-blue-600 hover:underline">Create a list first</a>.</p>
+        {% endif %}
+      </div>
+      
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Segments (Optional)</label>
+        {% if segments %}
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for segment in segments %}
+            <div class="flex items-start">
+              <div class="flex items-center h-5">
+                <input id="segment_{{ segment.id }}" name="segments" value="{{ segment.id }}" type="checkbox" 
+                       class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
+              </div>
+              <div class="ml-3 text-sm">
+                <label for="segment_{{ segment.id }}" class="font-medium text-gray-700">{{ segment.name }}</label>
+                <p class="text-gray-500">{{ segment.description|truncatechars:40 }}</p>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-gray-500">No segments available. <a href="{% url 'create_segment' %}" class="text-blue-600 hover:underline">Create a segment first</a>.</p>
+        {% endif %}
+      </div>
+    </div>
+    
+    <!-- Test Settings -->
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b">Test Settings</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label for="sample_size" class="block text-sm font-medium text-gray-700">Sample Size (%)</label>
+          <div class="mt-1 flex rounded-md shadow-sm">
+            <input type="number" name="sample_size" id="sample_size" min="1" max="100" value="20" required
+                   class="focus:ring-indigo-500 focus:border-indigo-500 flex-1 block w-full px-3 py-2 rounded-md sm:text-sm border border-gray-300">
+            <span class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+              %
+            </span>
+          </div>
+          <p class="mt-1 text-sm text-gray-500">Percentage of your audience to include in the test</p>
+        </div>
+        
+        <div>
+          <label for="winner_criteria" class="block text-sm font-medium text-gray-700">Pick a Winner Based On</label>
+          <select name="winner_criteria" id="winner_criteria" 
+                  class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+            {% for criteria_code, criteria_name in winner_criteria %}
+              <option value="{{ criteria_code }}">{{ criteria_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div>
+          <label for="wait_time" class="block text-sm font-medium text-gray-700">Time to Wait Before Picking Winner (hours)</label>
+          <input type="number" name="wait_time" id="wait_time" min="1" max="72" value="24" required
+                 class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+          <p class="mt-1 text-sm text-gray-500">How long to run the test before sending to remaining audience</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="flex items-center justify-end space-x-3 pt-4 border-t">
+      <a href="{% url 'campaign_list' %}" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        Cancel
+      </a>
+      <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        Create A/B Test
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Handle test type selection
+    const testTypeCards = document.querySelectorAll('.test-type-card');
+    
+    testTypeCards.forEach(card => {
+      // Set initial state
+      const radioInput = card.querySelector('input[type="radio"]');
+      if (radioInput.checked) {
+        card.classList.add('selected');
+      }
+      
+      // Add click handler
+      card.addEventListener('click', function() {
+        // Unselect all cards
+        testTypeCards.forEach(c => {
+          c.classList.remove('selected');
+          c.querySelector('input[type="radio"]').checked = false;
+        });
+        
+        // Select this card
+        this.classList.add('selected');
+        this.querySelector('input[type="radio"]').checked = true;
+      });
+    });
+  });
+</script>
+{% endblock %} 

@@ -1,0 +1,411 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load user_tags %}
+
+{% block title %}{{ campaign.name }} Analytics - EmailPro{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="md:flex md:items-center md:justify-between mb-6">
+        <div class="flex-1 min-w-0">
+            <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+                {{ campaign.name }} - Analytics
+            </h2>
+            <p class="mt-1 text-sm text-gray-500">
+                Campaign sent on {{ campaign.sent_time|date:"M d, Y H:i" }}
+            </p>
+        </div>
+        <div class="mt-4 flex md:mt-0 md:ml-4">
+            <a href="{% url 'campaign_detail' pk=campaign.pk %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Campaign
+            </a>
+        </div>
+    </div>
+
+    <!-- Performance Summary -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Performance Summary</h3>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">Key metrics from your campaign.</p>
+        </div>
+        <div class="border-t border-gray-200">
+            <div class="grid grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x divide-gray-200">
+                <div class="p-6 text-center">
+                    <p class="text-sm font-medium text-gray-500">Sent</p>
+                    <p class="mt-1 text-3xl font-semibold text-gray-900">{{ analytics.sent_count }}</p>
+                    <p class="text-sm text-gray-500">Total emails sent</p>
+                </div>
+                <div class="p-6 text-center">
+                    <p class="text-sm font-medium text-gray-500">Opened</p>
+                    <p class="mt-1 text-3xl font-semibold text-gray-900">{{ analytics.open_count }}</p>
+                    <p class="text-sm text-gray-500">{{ analytics.open_rate|floatformat:1 }}% open rate</p>
+                </div>
+                <div class="p-6 text-center">
+                    <p class="text-sm font-medium text-gray-500">Clicked</p>
+                    <p class="mt-1 text-3xl font-semibold text-gray-900">{{ analytics.click_count }}</p>
+                    <p class="text-sm text-gray-500">{{ analytics.click_rate|floatformat:1 }}% click rate</p>
+                </div>
+                <div class="p-6 text-center">
+                    <p class="text-sm font-medium text-gray-500">Bounced</p>
+                    <p class="mt-1 text-3xl font-semibold text-gray-900">{{ analytics.bounce_count }}</p>
+                    <p class="text-sm text-gray-500">{{ analytics.bounce_rate|floatformat:1 }}% bounce rate</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Opens Over Time -->
+        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+            <div class="px-4 py-5 sm:px-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Opens Over Time</h3>
+                <p class="mt-1 max-w-2xl text-sm text-gray-500">Tracking email opens since sending.</p>
+            </div>
+            <div class="border-t border-gray-200 p-4">
+                <div id="opens-chart" class="h-64"></div>
+            </div>
+        </div>
+
+        <!-- Clicks Over Time -->
+        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+            <div class="px-4 py-5 sm:px-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Clicks Over Time</h3>
+                <p class="mt-1 max-w-2xl text-sm text-gray-500">Tracking link clicks since sending.</p>
+            </div>
+            <div class="border-t border-gray-200 p-4">
+                <div id="clicks-chart" class="h-64"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Device & Browser Breakdown -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Device Breakdown -->
+        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+            <div class="px-4 py-5 sm:px-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Device Breakdown</h3>
+                <p class="mt-1 max-w-2xl text-sm text-gray-500">Distribution of devices used to open your email.</p>
+            </div>
+            <div class="border-t border-gray-200 p-4">
+                <div id="device-chart" class="h-64"></div>
+            </div>
+        </div>
+
+        <!-- Browser Breakdown -->
+        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+            <div class="px-4 py-5 sm:px-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Browser Breakdown</h3>
+                <p class="mt-1 max-w-2xl text-sm text-gray-500">Distribution of browsers used to open your email.</p>
+            </div>
+            <div class="border-t border-gray-200 p-4">
+                <div id="browser-chart" class="h-64"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popular Links -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Popular Links</h3>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">Most clicked links in your campaign.</p>
+        </div>
+        <div class="border-t border-gray-200">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Link
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Clicks
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Unique Clicks
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Click Rate
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for link in popular_links %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                <a href="{{ link.url }}" class="text-indigo-600 hover:text-indigo-900" target="_blank" rel="noopener noreferrer">
+                                    {{ link.label|default:link.url|truncatechars:50 }}
+                                </a>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ link.clicks }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ link.unique_clicks }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ link.click_rate|floatformat:1 }}%
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                No link clicks recorded yet.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Openers -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Top Subscribers</h3>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">Subscribers with highest engagement.</p>
+        </div>
+        <div class="border-t border-gray-200">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Email
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                List
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Opened
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Clicked
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Times Opened
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for subscriber in top_subscribers %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {{ subscriber.email }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ subscriber.list.name }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {% if subscriber.opened %}<i class="fas fa-check text-green-500"></i>{% else %}<i class="fas fa-times text-red-500"></i>{% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {% if subscriber.clicked %}<i class="fas fa-check text-green-500"></i>{% else %}<i class="fas fa-times text-red-500"></i>{% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ subscriber.open_count }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                No subscriber engagement recorded yet.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Geography -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Geographical Distribution</h3>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">Location of subscribers who opened your email.</p>
+        </div>
+        <div class="border-t border-gray-200">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Country
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Opens
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Percentage
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for country in countries %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {{ country.name }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ country.opens }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ country.percentage|floatformat:1 }}%
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                No geographical data recorded yet.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const opensChartEl = document.getElementById('opens-chart');
+        const clicksChartEl = document.getElementById('clicks-chart');
+        const deviceChartEl = document.getElementById('device-chart');
+        const browserChartEl = document.getElementById('browser-chart');
+        
+        // Opens Over Time Chart
+        if (opensChartEl) {
+            new Chart(opensChartEl, {
+                type: 'line',
+                data: {
+                    labels: JSON.parse('{{ open_times_json|escapejs }}'),
+                    datasets: [{
+                        label: 'Opens',
+                        data: JSON.parse('{{ open_counts_json|escapejs }}'),
+                        fill: false,
+                        borderColor: 'rgb(79, 70, 229)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Clicks Over Time Chart
+        if (clicksChartEl) {
+            new Chart(clicksChartEl, {
+                type: 'line',
+                data: {
+                    labels: JSON.parse('{{ click_times_json|escapejs }}'),
+                    datasets: [{
+                        label: 'Clicks',
+                        data: JSON.parse('{{ click_counts_json|escapejs }}'),
+                        fill: false,
+                        borderColor: 'rgb(59, 130, 246)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Device Breakdown Chart
+        if (deviceChartEl) {
+            new Chart(deviceChartEl, {
+                type: 'doughnut',
+                data: {
+                    labels: JSON.parse('{{ device_labels_json|escapejs }}'),
+                    datasets: [{
+                        data: JSON.parse('{{ device_data_json|escapejs }}'),
+                        backgroundColor: [
+                            'rgb(79, 70, 229)',
+                            'rgb(59, 130, 246)',
+                            'rgb(16, 185, 129)',
+                            'rgb(245, 158, 11)',
+                            'rgb(239, 68, 68)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Browser Breakdown Chart
+        if (browserChartEl) {
+            new Chart(browserChartEl, {
+                type: 'doughnut',
+                data: {
+                    labels: JSON.parse('{{ browser_labels_json|escapejs }}'),
+                    datasets: [{
+                        data: JSON.parse('{{ browser_data_json|escapejs }}'),
+                        backgroundColor: [
+                            'rgb(79, 70, 229)',
+                            'rgb(59, 130, 246)',
+                            'rgb(16, 185, 129)',
+                            'rgb(245, 158, 11)',
+                            'rgb(239, 68, 68)',
+                            'rgb(236, 72, 153)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %} 

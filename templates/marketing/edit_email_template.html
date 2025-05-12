@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load user_tags %}
+
+{% block title %}Edit Email Template - EmailPro{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="md:flex md:items-center md:justify-between mb-6">
+        <div class="flex-1 min-w-0">
+            <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+                Edit Email Template
+            </h2>
+            <p class="mt-1 text-sm text-gray-500">
+                Update the details of your email template
+            </p>
+        </div>
+        <div class="mt-4 flex md:mt-0 md:ml-4">
+            <a href="{% url 'email_templates' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Templates
+            </a>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <form method="post" action="">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="rounded-md bg-red-50 p-4 mb-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-circle text-red-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">There was an error with your submission</h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <ul class="list-disc pl-5 space-y-1">
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="space-y-6">
+                    <!-- Template Name -->
+                    <div>
+                        <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Template Name <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-1">
+                            <input type="text" name="{{ form.name.html_name }}" id="{{ form.name.id_for_label }}" value="{{ form.name.value|default:'' }}" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" placeholder="e.g. Monthly Newsletter">
+                            {% if form.name.errors %}
+                            <p class="mt-2 text-sm text-red-600">
+                                {{ form.name.errors.0 }}
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Subject -->
+                    <div>
+                        <label for="{{ form.subject.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Subject Line <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-1">
+                            <input type="text" name="{{ form.subject.html_name }}" id="{{ form.subject.id_for_label }}" value="{{ form.subject.value|default:'' }}" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" placeholder="e.g. Your Monthly Update from [Company]">
+                            {% if form.subject.errors %}
+                            <p class="mt-2 text-sm text-red-600">
+                                {{ form.subject.errors.0 }}
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Plain Text Content -->
+                    <div>
+                        <label for="{{ form.plain_text.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Plain Text Content
+                        </label>
+                        <div class="mt-1">
+                            <textarea name="{{ form.plain_text.html_name }}" id="{{ form.plain_text.id_for_label }}" rows="5" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" placeholder="Enter the plain text version of your email">{{ form.plain_text.value|default:'' }}</textarea>
+                            {% if form.plain_text.errors %}
+                            <p class="mt-2 text-sm text-red-600">
+                                {{ form.plain_text.errors.0 }}
+                            </p>
+                            {% endif %}
+                            <p class="mt-2 text-sm text-gray-500">Plain text version will be sent to recipients whose email clients can't display HTML.</p>
+                        </div>
+                    </div>
+
+                    <!-- HTML Content -->
+                    <div>
+                        <label for="{{ form.html_content.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            HTML Content <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-1">
+                            <textarea name="{{ form.html_content.html_name }}" id="{{ form.html_content.id_for_label }}" rows="10" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md code-editor" placeholder="Enter HTML code or use the visual editor">{{ form.html_content.value|default:'' }}</textarea>
+                            {% if form.html_content.errors %}
+                            <p class="mt-2 text-sm text-red-600">
+                                {{ form.html_content.errors.0 }}
+                            </p>
+                            {% endif %}
+                        </div>
+                        <div class="mt-2">
+                            <a href="{% url 'email_editor' %}?template_id={{ template.id }}" class="text-indigo-600 hover:text-indigo-900">
+                                <i class="fas fa-edit mr-1"></i> Open in Visual Editor
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <a href="{% url 'email_templates' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Cancel
+                    </a>
+                    <button type="submit" class="ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Save Template
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize code editor if available
+    document.addEventListener('DOMContentLoaded', function() {
+        const codeEditor = document.querySelector('.code-editor');
+        if (codeEditor && window.CodeMirror) {
+            CodeMirror.fromTextArea(codeEditor, {
+                mode: 'htmlmixed',
+                theme: 'default',
+                lineNumbers: true,
+                lineWrapping: true
+            });
+        }
+    });
+</script>
+{% endblock %} 

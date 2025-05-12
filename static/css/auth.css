@@ -1,0 +1,72 @@
+/* Custom styling for authentication forms */
+
+/* Default styling for form inputs */
+.form-input,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+select {
+    @apply w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50;
+}
+
+/* Error state for form inputs */
+.error input[type="text"],
+.error input[type="email"],
+.error input[type="password"],
+.error select {
+    @apply border-red-500 pr-10 focus:border-red-500 focus:ring-red-200;
+}
+
+/* Style for form labels */
+label {
+    @apply block text-sm font-medium text-gray-700 mb-1;
+}
+
+/* Improve checkbox/radio styling */
+input[type="checkbox"],
+input[type="radio"] {
+    @apply h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded;
+}
+
+/* Style for submit buttons */
+button[type="submit"] {
+    @apply w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors;
+}
+
+/* Help text styling */
+.helptext {
+    @apply mt-1 text-xs text-gray-500 block;
+}
+
+/* Error message styling */
+.errorlist {
+    @apply text-red-600 text-sm mt-1 list-none p-0;
+}
+
+/* Special form group spacing */
+.form-group {
+    @apply mb-4;
+}
+
+/* Hover effects for links */
+a {
+    @apply transition-colors;
+}
+
+/* Form field focus animation */
+.form-input:focus,
+input:focus,
+select:focus {
+    @apply transition-shadow duration-200;
+}
+
+/* Style for social login buttons */
+.social-login-btn {
+    @apply w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors;
+}
+
+/* Container styling for auth pages */
+.auth-container {
+    @apply flex flex-col md:flex-row h-full min-h-[600px] overflow-hidden bg-white rounded-lg shadow-lg mt-8;
+} 

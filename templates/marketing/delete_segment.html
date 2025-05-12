@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Segment{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-center min-h-screen bg-gray-50 py-12">
+  <div class="max-w-md w-full bg-white shadow-md rounded-lg overflow-hidden">
+    <div class="px-6 py-8">
+      <div class="text-center mb-6">
+        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+          <i class="fas fa-exclamation-triangle text-red-600"></i>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900">Delete Segment</h3>
+        <p class="mt-1 text-sm text-gray-500">
+          Are you sure you want to delete the segment <strong>"{{ segment.name }}"</strong>?
+        </p>
+      </div>
+      
+      <div class="bg-gray-50 p-4 rounded-md mb-6">
+        <p class="text-sm text-gray-700 mb-2">
+          <i class="fas fa-info-circle text-blue-500 mr-1"></i> This action cannot be undone.
+        </p>
+        <p class="text-sm text-gray-700">
+          Deleting this segment will not affect any subscribers or campaigns, but any references to this segment in A/B tests or automations may be impacted.
+        </p>
+      </div>
+      
+      <form method="post" class="mt-5">
+        {% csrf_token %}
+        <div class="flex items-center justify-between">
+          <a href="{% url 'segment_list' %}" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            Cancel
+          </a>
+          <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+            Delete Segment
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %} 

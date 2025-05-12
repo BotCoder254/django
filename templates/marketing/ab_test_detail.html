@@ -1,0 +1,452 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load user_tags %}
+
+{% block title %}A/B Test: {{ ab_test.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .variant-card {
+    transition: all 0.2s ease;
+  }
+  .variant-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  .badge-setup {
+    background-color: #EFF6FF;
+    color: #3B82F6;
+  }
+  .badge-running {
+    background-color: #ECFDF5;
+    color: #10B981;
+  }
+  .badge-completed {
+    background-color: #F3F4F6;
+    color: #6B7280;
+  }
+  .badge-cancelled {
+    background-color: #FEF2F2;
+    color: #EF4444;
+  }
+  .progress-bar {
+    height: 8px;
+    border-radius: 4px;
+    background-color: #E5E7EB;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background-color: #3B82F6;
+    transition: width 0.5s ease;
+  }
+  .stat-card {
+    transition: all 0.2s ease;
+  }
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  }
+  .chart-container {
+    height: 250px;
+    position: relative;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between">
+    <div>
+      <div class="flex items-center">
+        <h1 class="text-3xl font-bold text-gray-800">{{ ab_test.name }}</h1>
+        <span class="ml-3 badge {% if ab_test.status == 'setup' %}badge-setup{% elif ab_test.status == 'running' %}badge-running{% elif ab_test.status == 'completed' %}badge-completed{% else %}badge-cancelled{% endif %}">
+          {{ ab_test.get_status_display }}
+        </span>
+      </div>
+      <p class="text-gray-600 mt-2">{{ ab_test.description }}</p>
+      
+      <!-- Test Type and Info -->
+      <div class="mt-4 flex flex-wrap gap-3">
+        <div class="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
+          <i class="fas fa-flask mr-1"></i> Test: {{ ab_test.get_test_type_display }}
+        </div>
+        <div class="inline-flex items-center rounded-md bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700">
+          <i class="fas fa-percentage mr-1"></i> Sample: {{ ab_test.sample_size }}%
+        </div>
+        <div class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700">
+          <i class="fas fa-trophy mr-1"></i> Winner criteria: {{ ab_test.get_winner_criteria_display }}
+        </div>
+        <div class="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-700">
+          <i class="fas fa-clock mr-1"></i> Wait time: {{ ab_test.wait_time }} hours
+        </div>
+      </div>
+      
+      <!-- Test Dates -->
+      <div class="mt-3 flex flex-wrap gap-4 text-sm text-gray-500">
+        <div>
+          <i class="far fa-calendar-plus mr-1"></i> Created: {{ ab_test.created_at|date:"M d, Y" }}
+        </div>
+        {% if ab_test.start_time %}
+        <div>
+          <i class="far fa-calendar-check mr-1"></i> Started: {{ ab_test.start_time|date:"M d, Y H:i" }}
+        </div>
+        {% endif %}
+        {% if ab_test.end_time %}
+        <div>
+          <i class="far fa-calendar-times mr-1"></i> Ended: {{ ab_test.end_time|date:"M d, Y H:i" }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <div class="mt-4 md:mt-0 flex flex-wrap gap-2">
+      {% if ab_test.status == 'setup' %}
+      <a href="{% url 'edit_ab_test' pk=ab_test.pk %}" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        <i class="fas fa-edit mr-1"></i> Edit
+      </a>
+      <a href="{% url 'start_ab_test' pk=ab_test.pk %}" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+        <i class="fas fa-play mr-1"></i> Start Test
+      </a>
+      {% elif ab_test.status == 'running' %}
+      <a href="{% url 'cancel_ab_test' pk=ab_test.pk %}" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+        <i class="fas fa-times-circle mr-1"></i> Cancel Test
+      </a>
+      {% endif %}
+      <a href="{% url 'campaign_list' %}" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        <i class="fas fa-arrow-left mr-1"></i> Back to Campaigns
+      </a>
+    </div>
+  </div>
+  
+  <!-- Test Progress -->
+  {% if ab_test.status == 'running' %}
+  <div class="mb-8 bg-white rounded-lg shadow-md p-6">
+    <h2 class="text-xl font-semibold text-gray-800 mb-4">Test Progress</h2>
+    
+    <div class="mb-4">
+      <div class="flex justify-between mb-1">
+        <span class="text-sm font-medium text-gray-700">Time elapsed</span>
+        <span class="text-sm font-medium text-gray-700" id="progress-percent">--</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-bar-fill" id="progress-bar" style="width: 0%"></div>
+      </div>
+      <div class="flex justify-between mt-1 text-xs text-gray-500">
+        <span>Started: {{ ab_test.start_time|date:"M d, Y H:i" }}</span>
+        <span id="completion-time">Completes: --</span>
+      </div>
+    </div>
+    
+    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mt-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+        </div>
+        <div class="ml-3">
+          <p class="text-sm text-yellow-700">
+            The winner will be automatically selected after {{ ab_test.wait_time }} hours based on {{ ab_test.get_winner_criteria_display }}.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  
+  <!-- Audience Information -->
+  <div class="mb-8 bg-white rounded-lg shadow-md p-6">
+    <h2 class="text-xl font-semibold text-gray-800 mb-4">Audience</h2>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="stat-card bg-white rounded-lg border p-4">
+        <h3 class="text-sm font-medium text-gray-500">Total Audience</h3>
+        <p class="text-2xl font-bold text-indigo-600">{{ total_audience }}</p>
+      </div>
+      
+      <div class="stat-card bg-white rounded-lg border p-4">
+        <h3 class="text-sm font-medium text-gray-500">Test Sample</h3>
+        <p class="text-2xl font-bold text-blue-600">{{ ab_test.sample_size }}%</p>
+        <p class="text-sm text-gray-500 mt-1">≈ {{ total_audience }} subscribers in test</p>
+      </div>
+      
+      <div class="stat-card bg-white rounded-lg border p-4">
+        <h3 class="text-sm font-medium text-gray-500">Subscriber Lists</h3>
+        <p class="text-2xl font-bold text-teal-600">{{ ab_test.lists.count }}</p>
+      </div>
+      
+      <div class="stat-card bg-white rounded-lg border p-4">
+        <h3 class="text-sm font-medium text-gray-500">Segments Applied</h3>
+        <p class="text-2xl font-bold text-purple-600">{{ ab_test.segments.count }}</p>
+      </div>
+    </div>
+    
+    {% if ab_test.lists.exists %}
+    <div class="mt-6">
+      <h3 class="font-medium text-gray-700 mb-2">Subscriber Lists</h3>
+      <div class="bg-gray-50 rounded-lg p-4">
+        <ul class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+          {% for list in ab_test.lists.all %}
+          <li class="text-sm">
+            <i class="fas fa-users mr-1 text-gray-400"></i> {{ list.name }} ({{ list.subscribers.count }} subscribers)
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+    
+    {% if ab_test.segments.exists %}
+    <div class="mt-4">
+      <h3 class="font-medium text-gray-700 mb-2">Segments</h3>
+      <div class="bg-gray-50 rounded-lg p-4">
+        <ul class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+          {% for segment in ab_test.segments.all %}
+          <li class="text-sm">
+            <i class="fas fa-filter mr-1 text-gray-400"></i> {{ segment.name }}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  
+  <!-- Variants -->
+  <div class="mb-8 bg-white rounded-lg shadow-md p-6">
+    <h2 class="text-xl font-semibold text-gray-800 mb-4">Variants</h2>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {% for variant in variants %}
+      <div class="variant-card bg-white rounded-lg border p-4">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-medium text-lg">{{ variant.name }}</h3>
+          {% if ab_test.winner == variant %}
+          <span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700">
+            <i class="fas fa-trophy mr-1"></i> Winner
+          </span>
+          {% endif %}
+        </div>
+        
+        {% if ab_test.test_type == 'subject' %}
+        <div class="mb-3">
+          <p class="text-sm font-medium text-gray-700">Subject Line:</p>
+          <p class="text-gray-900 mt-1">{{ variant.subject }}</p>
+        </div>
+        
+        {% elif ab_test.test_type == 'content' %}
+        <div class="mb-3">
+          <p class="text-sm font-medium text-gray-700">Email Content:</p>
+          <div class="border rounded-md p-3 mt-1 bg-gray-50 max-h-48 overflow-auto">
+            {{ variant.html_content|safe|default:"<em class='text-gray-500'>No content</em>" }}
+          </div>
+        </div>
+        
+        {% elif ab_test.test_type == 'sender' %}
+        <div class="mb-3">
+          <p class="text-sm font-medium text-gray-700">Sender:</p>
+          <p class="text-gray-900 mt-1">{{ variant.from_name }} &lt;{{ variant.from_email }}&gt;</p>
+        </div>
+        
+        {% elif ab_test.test_type == 'time' %}
+        <div class="mb-3">
+          <p class="text-sm font-medium text-gray-700">Send Time:</p>
+          <p class="text-gray-900 mt-1">{{ variant.send_time|date:"M d, Y H:i" }}</p>
+        </div>
+        {% endif %}
+        
+        {% if ab_test.status != 'setup' %}
+        <div class="border-t pt-4 mt-4">
+          <h4 class="font-medium text-gray-700 mb-2">Performance Metrics</h4>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <p class="text-sm text-gray-500">Delivered</p>
+              <p class="text-lg font-semibold">{{ variant.delivered_count|default:0 }}</p>
+            </div>
+            <div>
+              <p class="text-sm text-gray-500">Opens</p>
+              <p class="text-lg font-semibold">{{ variant.open_count|default:0 }}</p>
+              <p class="text-xs text-gray-500">{{ variant.open_rate|floatformat:1 }}%</p>
+            </div>
+            <div>
+              <p class="text-sm text-gray-500">Clicks</p>
+              <p class="text-lg font-semibold">{{ variant.click_count|default:0 }}</p>
+              <p class="text-xs text-gray-500">{{ variant.click_rate|floatformat:1 }}%</p>
+            </div>
+            <div>
+              <p class="text-sm text-gray-500">Conversions</p>
+              <p class="text-lg font-semibold">{{ variant.conversion_count|default:0 }}</p>
+              <p class="text-xs text-gray-500">{{ variant.conversion_rate|floatformat:1 }}%</p>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  
+  <!-- Performance Comparison -->
+  {% if ab_test.status == 'running' or ab_test.status == 'completed' %}
+  <div class="mb-8 bg-white rounded-lg shadow-md p-6">
+    <h2 class="text-xl font-semibold text-gray-800 mb-4">Performance Comparison</h2>
+    
+    <div class="chart-container"
+         data-status="{{ ab_test.status }}"
+         data-wait-hours="{{ ab_test.wait_time|default:'24' }}"
+         {% if ab_test.start_time %}data-start-time="{{ ab_test.start_time|date:'c' }}"{% endif %}
+         data-variants="{{ variant_data_json|escapejs }}">
+        <canvas id="comparison-chart"></canvas>
+    </div>
+    
+    {% if ab_test.status == 'completed' and ab_test.winner %}
+    <div class="mt-8 bg-green-50 border-l-4 border-green-400 p-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <i class="fas fa-trophy text-green-400"></i>
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-green-800">Winner: {{ ab_test.winner.name }}</h3>
+          <div class="mt-2 text-sm text-green-700">
+            <p>This variant performed {{ ab_test.winner_margin|floatformat:1 }}% better based on {{ ab_test.get_winner_criteria_display }}.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Get data from HTML data attributes
+  const chartContainer = document.querySelector('.chart-container');
+  if (!chartContainer) return;
+  
+  const abTestStatus = chartContainer.dataset.status || '';
+  const waitHours = parseInt(chartContainer.dataset.waitHours || '24');
+  const startTimeStr = chartContainer.dataset.startTime || null;
+  
+  let variants = [];
+  try {
+    if (chartContainer.dataset.variants) {
+      variants = JSON.parse(chartContainer.dataset.variants);
+    }
+  } catch (e) {
+    console.error("Error parsing variant data:", e);
+  }
+
+  // Handle progress updates for running tests
+  if (abTestStatus === "running" && startTimeStr) {
+    initProgressTracking(startTimeStr, waitHours);
+  }
+  
+  // Initialize chart for running or completed tests
+  if ((abTestStatus === "running" || abTestStatus === "completed") && variants.length > 0) {
+    initComparisonChart(variants);
+  }
+});
+
+// Track progress of running test
+function initProgressTracking(startTimeStr, waitHours) {
+  const startTime = new Date(startTimeStr);
+  const endTime = new Date(startTime.getTime() + (waitHours * 60 * 60 * 1000));
+  
+  function updateProgress() {
+    const now = new Date();
+    
+    // If test is still running
+    if (now < endTime) {
+      const totalDuration = endTime - startTime;
+      const elapsed = now - startTime;
+      const progressPercent = Math.min(100, Math.round((elapsed / totalDuration) * 100));
+      
+      // Update progress bar
+      const progressBar = document.getElementById('progress-bar');
+      if (progressBar) {
+        progressBar.style.width = progressPercent + '%';
+      }
+      
+      // Update progress percentage
+      const progressPercentEl = document.getElementById('progress-percent');
+      if (progressPercentEl) {
+        progressPercentEl.textContent = progressPercent + '%';
+      }
+      
+      // Update completion time
+      const completionTimeEl = document.getElementById('completion-time');
+      if (completionTimeEl) {
+        completionTimeEl.textContent = 'Completes: ' + endTime.toLocaleString();
+      }
+    }
+  }
+  
+  updateProgress();
+  setInterval(updateProgress, 60000); // Update every minute
+}
+
+// Initialize comparison chart
+function initComparisonChart(variants) {
+  const ctx = document.getElementById('comparison-chart').getContext('2d');
+  const variantColors = [
+    'rgba(59, 130, 246, 0.7)', // Blue
+    'rgba(139, 92, 246, 0.7)',  // Purple
+    'rgba(16, 185, 129, 0.7)',  // Green
+    'rgba(245, 158, 11, 0.7)',  // Yellow
+  ];
+  
+  // Prepare chart datasets
+  const datasets = variants.map((variant, index) => {
+    return {
+      label: variant.name,
+      data: [variant.openRate, variant.clickRate, variant.conversionRate],
+      backgroundColor: variantColors[index % variantColors.length],
+      borderColor: variantColors[index % variantColors.length],
+      borderWidth: 1
+    };
+  });
+  
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Open Rate', 'Click Rate', 'Conversion Rate'],
+      datasets: datasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: 'Percentage (%)'
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          position: 'top',
+        },
+        title: {
+          display: false
+        }
+      }
+    }
+  });
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit A/B Test Campaign{% endblock %}
+
+{% block extra_css %}
+<style>
+  .test-type-card {
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+  }
+  .test-type-card.selected {
+    border-color: #3B82F6;
+    box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
+  }
+  .variant-card {
+    transition: all 0.2s ease;
+  }
+  .variant-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="mb-8 flex items-center justify-between">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-800">Edit A/B Test Campaign</h1>
+      <p class="text-gray-600 mt-2">Test different variants to optimize your campaign performance</p>
+    </div>
+    <div>
+      <a href="{% url 'ab_test_detail' pk=ab_test.pk %}" class="text-indigo-600 hover:text-indigo-800">
+        <i class="fas fa-arrow-left mr-1"></i> Back to Details
+      </a>
+    </div>
+  </div>
+
+  <form method="post" class="bg-white rounded-lg shadow-md p-6">
+    {% csrf_token %}
+    
+    <!-- Basic Information -->
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b">Basic Information</h2>
+      
+      <div class="mb-4">
+        <label for="name" class="block text-sm font-medium text-gray-700">Campaign Name</label>
+        <input type="text" name="name" id="name" required value="{{ ab_test.name }}"
+               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+      </div>
+      
+      <div class="mb-4">
+        <label for="description" class="block text-sm font-medium text-gray-700">Description (Optional)</label>
+        <textarea name="description" id="description" rows="2"
+                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">{{ ab_test.description }}</textarea>
+      </div>
+      
+      <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mt-4">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <i class="fas fa-info-circle text-blue-400"></i>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-blue-700">
+              Test type: <strong>{{ ab_test.get_test_type_display }}</strong>
+              <br>
+              <span class="text-xs text-blue-500">The test type cannot be changed after creation.</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Variant Configuration -->
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b">Configure Variants</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {% for variant in variants %}
+        <div class="variant-card bg-white rounded-lg border p-4">
+          <h3 class="font-medium text-lg mb-3">{{ variant.name }}</h3>
+          
+          {% if ab_test.test_type == 'subject' %}
+          <div class="mb-3">
+            <label for="variant_{{ variant.id }}_subject" class="block text-sm font-medium text-gray-700">Subject Line</label>
+            <input type="text" name="variant_{{ variant.id }}_subject" id="variant_{{ variant.id }}_subject" 
+                   value="{{ variant.subject }}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+          </div>
+          
+          {% elif ab_test.test_type == 'content' %}
+          <div class="mb-3">
+            <label for="variant_{{ variant.id }}_html_content" class="block text-sm font-medium text-gray-700">Email Content</label>
+            <textarea name="variant_{{ variant.id }}_html_content" id="variant_{{ variant.id }}_html_content" rows="5"
+                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">{{ variant.html_content }}</textarea>
+          </div>
+          <div class="mb-3">
+            <label for="variant_{{ variant.id }}_content" class="block text-sm font-medium text-gray-700">Plain Text Version</label>
+            <textarea name="variant_{{ variant.id }}_content" id="variant_{{ variant.id }}_content" rows="3"
+                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">{{ variant.content }}</textarea>
+          </div>
+          <div class="mt-2 text-right">
+            <a href="{% url 'email_editor' %}" class="text-indigo-600 hover:text-indigo-900 text-sm">
+              <i class="fas fa-pen-fancy mr-1"></i> Use Email Editor
+            </a>
+          </div>
+          
+          {% elif ab_test.test_type == 'sender' %}
+          <div class="mb-3">
+            <label for="variant_{{ variant.id }}_from_name" class="block text-sm font-medium text-gray-700">Sender Name</label>
+            <input type="text" name="variant_{{ variant.id }}_from_name" id="variant_{{ variant.id }}_from_name" 
+                   value="{{ variant.from_name }}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+          </div>
+          <div class="mb-3">
+            <label for="variant_{{ variant.id }}_from_email" class="block text-sm font-medium text-gray-700">Sender Email</label>
+            <input type="email" name="variant_{{ variant.id }}_from_email" id="variant_{{ variant.id }}_from_email" 
+                   value="{{ variant.from_email }}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+          </div>
+          
+          {% elif ab_test.test_type == 'time' %}
+          <div class="mb-3">
+            <label for="variant_{{ variant.id }}_send_time" class="block text-sm font-medium text-gray-700">Send Time</label>
+            <input type="datetime-local" name="variant_{{ variant.id }}_send_time" id="variant_{{ variant.id }}_send_time" 
+                   value="{% if variant.send_time %}{{ variant.send_time|date:'Y-m-d\TH:i' }}{% endif %}" 
+                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      
+      <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mt-6">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-yellow-700">
+              Both variants must be completely filled out before you can start the test.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Audience Selection -->
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b">Select Your Audience</h2>
+      
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Subscriber Lists</label>
+        {% if subscriber_lists %}
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for list in subscriber_lists %}
+            <div class="flex items-start">
+              <div class="flex items-center h-5">
+                <input id="list_{{ list.id }}" name="lists" value="{{ list.id }}" type="checkbox" 
+                       {% if list.id in selected_list_ids %}checked{% endif %}
+                       class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
+              </div>
+              <div class="ml-3 text-sm">
+                <label for="list_{{ list.id }}" class="font-medium text-gray-700">{{ list.name }}</label>
+                <p class="text-gray-500">{{ list.subscribers.count }} subscribers</p>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-gray-500">No subscriber lists available. <a href="{% url 'create_subscriber_list' %}" class="text-blue-600 hover:underline">Create a list first</a>.</p>
+        {% endif %}
+      </div>
+      
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Segments (Optional)</label>
+        {% if segments %}
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for segment in segments %}
+            <div class="flex items-start">
+              <div class="flex items-center h-5">
+                <input id="segment_{{ segment.id }}" name="segments" value="{{ segment.id }}" type="checkbox" 
+                       {% if segment.id in selected_segment_ids %}checked{% endif %}
+                       class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
+              </div>
+              <div class="ml-3 text-sm">
+                <label for="segment_{{ segment.id }}" class="font-medium text-gray-700">{{ segment.name }}</label>
+                <p class="text-gray-500">{{ segment.description|truncatechars:40 }}</p>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-gray-500">No segments available. <a href="{% url 'create_segment' %}" class="text-blue-600 hover:underline">Create a segment first</a>.</p>
+        {% endif %}
+      </div>
+    </div>
+    
+    <!-- Test Settings -->
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b">Test Settings</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label for="sample_size" class="block text-sm font-medium text-gray-700">Sample Size (%)</label>
+          <div class="mt-1 flex rounded-md shadow-sm">
+            <input type="number" name="sample_size" id="sample_size" min="1" max="100" value="{{ ab_test.sample_size }}" required
+                   class="focus:ring-indigo-500 focus:border-indigo-500 flex-1 block w-full px-3 py-2 rounded-md sm:text-sm border border-gray-300">
+            <span class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+              %
+            </span>
+          </div>
+          <p class="mt-1 text-sm text-gray-500">Percentage of your audience to include in the test</p>
+        </div>
+        
+        <div>
+          <label for="winner_criteria" class="block text-sm font-medium text-gray-700">Pick a Winner Based On</label>
+          <select name="winner_criteria" id="winner_criteria" 
+                  class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+            {% for criteria_code, criteria_name in winner_criteria %}
+              <option value="{{ criteria_code }}" {% if ab_test.winner_criteria == criteria_code %}selected{% endif %}>{{ criteria_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div>
+          <label for="wait_time" class="block text-sm font-medium text-gray-700">Time to Wait Before Picking Winner (hours)</label>
+          <input type="number" name="wait_time" id="wait_time" min="1" max="72" value="{{ ab_test.wait_time }}" required
+                 class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+          <p class="mt-1 text-sm text-gray-500">How long to run the test before sending to remaining audience</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="flex items-center justify-end space-x-3 pt-4 border-t">
+      <a href="{% url 'ab_test_detail' pk=ab_test.pk %}" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        Cancel
+      </a>
+      <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        Save Changes
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %} 
