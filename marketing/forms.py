@@ -2,6 +2,7 @@ from django import forms
 from .models import Subscriber, SubscriberList, EmailTemplate, Campaign
 import csv
 import io
+from django.utils import timezone
 
 class SubscriberForm(forms.ModelForm):
     """
@@ -126,6 +127,15 @@ class CampaignScheduleForm(forms.ModelForm):
                 'type': 'datetime-local'
             }),
         }
+
+    def clean_schedule_time(self):
+        """
+        Ensure schedule_time is timezone aware
+        """
+        schedule_time = self.cleaned_data.get('schedule_time')
+        if schedule_time and timezone.is_naive(schedule_time):
+            schedule_time = timezone.make_aware(schedule_time)
+        return schedule_time
 
 class ContactForm(forms.Form):
     """

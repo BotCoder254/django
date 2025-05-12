@@ -5,253 +5,198 @@
 {% block title %}{{ list.name }} - Subscriber List - EmailPro{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Header -->
-    <div class="md:flex md:items-center md:justify-between mb-6">
-        <div class="flex-1 min-w-0">
-            <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
-                {{ list.name }}
-            </h2>
-            <p class="mt-1 text-sm text-gray-500">
-                {{ list.subscribers.count }} subscribers
-            </p>
+<div class="container max-w-6xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">{{ list.name }}</h1>
+            <p class="text-sm text-gray-500">{{ list.subscribers.count }} subscribers</p>
         </div>
-        <div class="mt-4 flex flex-wrap gap-2 md:mt-0 md:ml-4">
-            <a href="{% url 'edit_subscriber_list' pk=list.pk %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                <i class="fas fa-edit mr-2"></i> Edit List
+        <div class="flex space-x-3">
+            <a href="{% url 'subscriber_lists' %}" class="text-indigo-600 hover:text-indigo-800">
+                <i class="fas fa-arrow-left mr-1"></i> Back to Lists
             </a>
-            <a href="{% url 'add_subscriber' list_id=list.pk %}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                <i class="fas fa-user-plus mr-2"></i> Add Subscriber
-            </a>
-            <a href="{% url 'import_subscribers' list_id=list.pk %}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                <i class="fas fa-file-import mr-2"></i> Import
-            </a>
-            <a href="{% url 'export_subscribers' list_id=list.pk %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                <i class="fas fa-file-export mr-2"></i> Export
-            </a>
-            <a href="{% url 'subscriber_lists' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                <i class="fas fa-arrow-left mr-2"></i> Back to Lists
+            <a href="{% url 'edit_subscriber_list' pk=list.id %}" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                <i class="fas fa-edit mr-1"></i> Edit List
             </a>
         </div>
     </div>
 
-    <!-- List Details -->
-    <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-        <div class="px-4 py-5 sm:px-6">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">List Details</h3>
-            <p class="mt-1 max-w-2xl text-sm text-gray-500">Information about this subscriber list.</p>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <div class="flex items-center mb-4">
+                <div class="rounded-full bg-indigo-100 p-3">
+                    <i class="fas fa-users text-indigo-600"></i>
+                </div>
+                <h2 class="ml-3 text-lg font-semibold text-gray-800">Total Subscribers</h2>
+            </div>
+            <div class="text-3xl font-bold text-indigo-600">{{ list.subscribers.count }}</div>
         </div>
-        <div class="border-t border-gray-200">
-            <dl>
-                <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                    <dt class="text-sm font-medium text-gray-500">Name</dt>
-                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ list.name }}</dd>
+        
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <div class="flex items-center mb-4">
+                <div class="rounded-full bg-green-100 p-3">
+                    <i class="fas fa-envelope-open text-green-600"></i>
                 </div>
-                <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                    <dt class="text-sm font-medium text-gray-500">Description</dt>
-                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ list.description|default:"No description provided" }}</dd>
+                <h2 class="ml-3 text-lg font-semibold text-gray-800">Open Rate</h2>
+            </div>
+            <div class="text-3xl font-bold text-green-600">{{ open_rate|default:"--" }}</div>
+        </div>
+        
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <div class="flex items-center mb-4">
+                <div class="rounded-full bg-blue-100 p-3">
+                    <i class="fas fa-mouse-pointer text-blue-600"></i>
                 </div>
-                <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                    <dt class="text-sm font-medium text-gray-500">Created</dt>
-                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ list.created_at|date:"M d, Y H:i" }}</dd>
-                </div>
-                <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                    <dt class="text-sm font-medium text-gray-500">Subscribers</dt>
-                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ list.subscribers.count }} subscribers</dd>
-                </div>
-                <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                    <dt class="text-sm font-medium text-gray-500">Recent Campaigns</dt>
-                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                        {% if recent_campaigns %}
-                            <ul class="border border-gray-200 rounded-md divide-y divide-gray-200">
-                                {% for campaign in recent_campaigns %}
-                                <li class="pl-3 pr-4 py-3 flex items-center justify-between text-sm">
-                                    <div class="w-0 flex-1 flex items-center">
-                                        <i class="fas fa-envelope flex-shrink-0 text-gray-400 mr-2"></i>
-                                        <span class="flex-1 truncate">
-                                            <a href="{% url 'campaign_detail' pk=campaign.pk %}" class="text-indigo-600 hover:text-indigo-900">
-                                                {{ campaign.name }}
-                                            </a>
-                                        </span>
-                                    </div>
-                                    <div class="ml-4 flex-shrink-0">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                            {% if campaign.status == 'draft' %}bg-gray-100 text-gray-800
-                                            {% elif campaign.status == 'scheduled' %}bg-yellow-100 text-yellow-800
-                                            {% elif campaign.status == 'sending' %}bg-blue-100 text-blue-800
-                                            {% elif campaign.status == 'sent' %}bg-green-100 text-green-800
-                                            {% elif campaign.status == 'cancelled' %}bg-red-100 text-red-800{% endif %}">
-                                            {{ campaign.get_status_display }}
-                                        </span>
-                                    </div>
-                                </li>
-                                {% endfor %}
-                            </ul>
-                        {% else %}
-                            <span class="text-gray-500">No campaigns sent to this list yet.</span>
-                        {% endif %}
-                    </dd>
-                </div>
-            </dl>
+                <h2 class="ml-3 text-lg font-semibold text-gray-800">Click Rate</h2>
+            </div>
+            <div class="text-3xl font-bold text-blue-600">{{ click_rate|default:"--" }}</div>
         </div>
     </div>
 
-    <!-- Subscribers -->
-    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
-        <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+    <div class="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+        <div class="border-b px-6 py-4 flex justify-between items-center">
+            <h3 class="text-lg font-semibold text-gray-800">Subscribers</h3>
             <div>
-                <h3 class="text-lg leading-6 font-medium text-gray-900">Subscribers</h3>
-                <p class="mt-1 max-w-2xl text-sm text-gray-500">Contacts in this list.</p>
-            </div>
-            
-            <!-- Search and Filter -->
-            <div class="max-w-lg w-full lg:max-w-xs">
-                <form method="get" class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <i class="fas fa-search text-gray-400"></i>
-                    </div>
-                    <input id="search" name="search" value="{{ request.GET.search|default:'' }}" class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Search subscribers" type="search">
-                </form>
+                <a href="{% url 'add_subscriber' %}" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors">
+                    <i class="fas fa-user-plus mr-1"></i> Add Subscriber
+                </a>
+                <button id="importBtn" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors ml-2">
+                    <i class="fas fa-file-import mr-1"></i> Import CSV
+                </button>
             </div>
         </div>
-        
-        <!-- Table -->
-        <div class="border-t border-gray-200">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Email
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Name
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Date Added
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Status
-                            </th>
-                            <th scope="col" class="relative px-6 py-3">
-                                <span class="sr-only">Actions</span>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        {% for subscriber in subscribers %}
-                        <tr>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+
+        <div class="overflow-x-auto">
+            {% if subscribers %}
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Email
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Name
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Status
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Subscribed Date
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for subscriber in subscribers %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">
                                 {{ subscriber.email }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {{ subscriber.first_name }} {{ subscriber.last_name }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {{ subscriber.created_at|date:"M d, Y" }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {% if subscriber.is_active %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
-                                    {% if subscriber.is_active %}Active{% else %}Unsubscribed{% endif %}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <div class="flex items-center justify-end space-x-2">
-                                    <a href="{% url 'edit_subscriber' pk=subscriber.pk %}" class="text-indigo-600 hover:text-indigo-900">
-                                        <i class="fas fa-edit"></i>
-                                        <span class="sr-only">Edit</span>
-                                    </a>
-                                    <a href="{% url 'delete_subscriber' pk=subscriber.pk list_id=list.pk %}" class="text-red-600 hover:text-red-900 ml-2">
-                                        <i class="fas fa-trash-alt"></i>
-                                        <span class="sr-only">Delete</span>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                                No subscribers found. <a href="{% url 'add_subscriber' list_id=list.pk %}" class="text-indigo-600 hover:text-indigo-900">Add a subscriber</a> or <a href="{% url 'import_subscribers' list_id=list.pk %}" class="text-indigo-600 hover:text-indigo-900">import from CSV</a>.
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        
-        <!-- Pagination -->
-        {% if subscribers.paginator.num_pages > 1 %}
-        <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-            <div class="flex-1 flex justify-between sm:hidden">
-                {% if subscribers.has_previous %}
-                <a href="?page={{ subscribers.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                    Previous
-                </a>
-                {% else %}
-                <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-300 bg-white cursor-not-allowed">
-                    Previous
-                </span>
-                {% endif %}
-                
-                {% if subscribers.has_next %}
-                <a href="?page={{ subscribers.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                    Next
-                </a>
-                {% else %}
-                <span class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-300 bg-white cursor-not-allowed">
-                    Next
-                </span>
-                {% endif %}
-            </div>
-            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <div>
-                    <p class="text-sm text-gray-700">
-                        Showing <span class="font-medium">{{ subscribers.start_index }}</span> to <span class="font-medium">{{ subscribers.end_index }}</span> of <span class="font-medium">{{ subscribers.paginator.count }}</span> subscribers
-                    </p>
-                </div>
-                <div>
-                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                        {% if subscribers.has_previous %}
-                        <a href="?page={{ subscribers.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                            <span class="sr-only">Previous</span>
-                            <i class="fas fa-chevron-left h-5 w-5"></i>
-                        </a>
-                        {% else %}
-                        <span class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-300 cursor-not-allowed">
-                            <span class="sr-only">Previous</span>
-                            <i class="fas fa-chevron-left h-5 w-5"></i>
-                        </span>
-                        {% endif %}
-                        
-                        {% for page_num in paginator.page_range %}
-                            {% if page_num == subscribers.number %}
-                            <span class="bg-indigo-50 border-indigo-500 text-indigo-600 relative inline-flex items-center px-4 py-2 border text-sm font-medium">
-                                {{ page_num }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">
+                                {% if subscriber.first_name or subscriber.last_name %}
+                                    {{ subscriber.first_name }} {{ subscriber.last_name }}
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if subscriber.is_active %}
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                Active
                             </span>
-                            {% elif page_num > subscribers.number|add:"-3" and page_num < subscribers.number|add:"3" %}
-                            <a href="?page={{ page_num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="bg-white border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium">
-                                {{ page_num }}
-                            </a>
+                            {% else %}
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                Inactive
+                            </span>
                             {% endif %}
-                        {% endfor %}
-                        
-                        {% if subscribers.has_next %}
-                        <a href="?page={{ subscribers.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                            <span class="sr-only">Next</span>
-                            <i class="fas fa-chevron-right h-5 w-5"></i>
-                        </a>
-                        {% else %}
-                        <span class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-300 cursor-not-allowed">
-                            <span class="sr-only">Next</span>
-                            <i class="fas fa-chevron-right h-5 w-5"></i>
-                        </span>
-                        {% endif %}
-                    </nav>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ subscriber.created_at|date:"M d, Y" }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <a href="{% url 'edit_subscriber' pk=subscriber.id %}" class="text-blue-600 hover:text-blue-900 mr-3">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{% url 'delete_subscriber' pk=subscriber.id %}" class="text-red-600 hover:text-red-900">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="text-center py-8">
+                <div class="text-gray-400">
+                    <i class="fas fa-user-alt-slash fa-4x mb-4"></i>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900">No Subscribers Yet</h3>
+                <p class="text-gray-500 mt-1 mb-6">This list doesn't have any subscribers yet.</p>
+                <div class="flex justify-center space-x-4">
+                    <a href="{% url 'add_subscriber' %}" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors">
+                        <i class="fas fa-user-plus mr-1"></i> Add Subscriber
+                    </a>
+                    <button id="importBtnEmpty" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors">
+                        <i class="fas fa-file-import mr-1"></i> Import CSV
+                    </button>
                 </div>
             </div>
+            {% endif %}
         </div>
-        {% endif %}
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">List Details</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <h4 class="text-sm font-medium text-gray-500 mb-1">List Name</h4>
+                <p class="text-gray-900">{{ list.name }}</p>
+            </div>
+            <div>
+                <h4 class="text-sm font-medium text-gray-500 mb-1">Created On</h4>
+                <p class="text-gray-900">{{ list.created_at|date:"F d, Y" }}</p>
+            </div>
+            {% if list.description %}
+            <div class="md:col-span-2">
+                <h4 class="text-sm font-medium text-gray-500 mb-1">Description</h4>
+                <p class="text-gray-900">{{ list.description }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- CSV Import Modal -->
+<div id="importModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full" style="z-index: 50;">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3 text-center">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Import Subscribers</h3>
+            <form action="{% url 'import_subscribers_with_list' list_id=list.id %}" method="post" enctype="multipart/form-data" class="mt-2">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <label for="csv_file" class="block text-sm font-medium text-gray-700 text-left mb-1">
+                        CSV File
+                    </label>
+                    <input type="file" name="csv_file" id="csv_file" accept=".csv" 
+                           class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                    <p class="mt-1 text-xs text-gray-500 text-left">File must have email header and optionally first_name, last_name</p>
+                </div>
+                <div class="flex items-center justify-between mt-5">
+                    <button type="button" id="closeModal" class="px-4 py-2 bg-gray-200 text-gray-800 text-base font-medium rounded-md w-24 shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white text-base font-medium rounded-md w-24 shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                        Import
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -259,17 +204,26 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Auto-submit search form on input change
-        const searchInput = document.getElementById('search');
-        if (searchInput) {
-            searchInput.addEventListener('input', function() {
-                // Add a small delay to prevent too many requests
-                if (this._timeout) {
-                    clearTimeout(this._timeout);
-                }
-                this._timeout = setTimeout(() => {
-                    this.form.submit();
-                }, 500);
+        const importBtn = document.getElementById('importBtn');
+        const importBtnEmpty = document.getElementById('importBtnEmpty');
+        const importModal = document.getElementById('importModal');
+        const closeModal = document.getElementById('closeModal');
+        
+        if (importBtn) {
+            importBtn.addEventListener('click', function() {
+                importModal.classList.remove('hidden');
+            });
+        }
+        
+        if (importBtnEmpty) {
+            importBtnEmpty.addEventListener('click', function() {
+                importModal.classList.remove('hidden');
+            });
+        }
+        
+        if (closeModal) {
+            closeModal.addEventListener('click', function() {
+                importModal.classList.add('hidden');
             });
         }
     });

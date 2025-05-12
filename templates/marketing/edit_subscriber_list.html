@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Subscriber List - EmailPro{% endblock %}
+
+{% block content %}
+<div class="container max-w-2xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Edit Subscriber List</h1>
+        <a href="{% url 'subscriber_lists' %}" class="text-indigo-600 hover:text-indigo-800">
+            <i class="fas fa-arrow-left mr-1"></i> Back to Lists
+        </a>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <form method="post" class="p-6 space-y-6">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-circle text-red-400"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-red-700">
+                            {{ form.non_field_errors }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div>
+                <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    List Name *
+                </label>
+                <div class="mt-1">
+                    <input type="text" name="{{ form.name.name }}" id="{{ form.name.id_for_label }}" 
+                           class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                           value="{{ form.name.value }}" required>
+                </div>
+                {% if form.name.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ form.name.errors }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    Description
+                </label>
+                <div class="mt-1">
+                    <textarea name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" rows="3"
+                              class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                              placeholder="Describe the purpose of this list">{{ form.description.value }}</textarea>
+                </div>
+                {% if form.description.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ form.description.errors }}</p>
+                {% endif %}
+            </div>
+            
+            <div class="flex justify-end space-x-3 pt-4">
+                <a href="{% url 'subscriber_lists' %}" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Cancel
+                </a>
+                <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Update List
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Subscriber Stats Section -->
+    <div class="mt-8 bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold mb-4">List Statistics</h2>
+        <div class="grid grid-cols-3 gap-4">
+            <div class="bg-gray-100 p-4 rounded-lg text-center">
+                <p class="text-gray-600 text-sm mb-1">Total Subscribers</p>
+                <p class="text-2xl font-bold text-indigo-600">{{ list.subscribers.count }}</p>
+            </div>
+            <div class="bg-gray-100 p-4 rounded-lg text-center">
+                <p class="text-gray-600 text-sm mb-1">Active Subscribers</p>
+                <p class="text-2xl font-bold text-green-600">{{ list.subscribers.filter(is_active=True).count }}</p>
+            </div>
+            <div class="bg-gray-100 p-4 rounded-lg text-center">
+                <p class="text-gray-600 text-sm mb-1">Created On</p>
+                <p class="text-md font-semibold text-gray-800">{{ list.created_at|date:"M d, Y" }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add form field styling
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add styling to form fields
+        const formInputs = document.querySelectorAll('input[type="text"], input[type="email"], textarea');
+        formInputs.forEach(input => {
+            input.classList.add('w-full', 'rounded-md', 'border', 'border-gray-300', 'px-3', 'py-2', 'shadow-sm', 'focus:border-indigo-500', 'focus:ring', 'focus:ring-indigo-200', 'focus:ring-opacity-50');
+            
+            if (input.tagName === 'TEXTAREA') {
+                input.rows = 3;
+            }
+        });
+    });
+</script>
+{% endblock %} 

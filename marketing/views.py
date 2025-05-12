@@ -106,13 +106,18 @@ def dashboard(request):
         start_date = default_start_date
         end_date = today
     
-    # Add one day to end_date to include the whole day in the range
-    end_date_inclusive = end_date + datetime.timedelta(days=1)
+    # Create timezone-aware datetime objects for filtering
+    start_datetime = timezone.make_aware(datetime.datetime.combine(start_date, datetime.time.min))
+    end_datetime = timezone.make_aware(datetime.datetime.combine(end_date, datetime.time.max))
     
     # Previous period for growth calculation
     period_days = (end_date - start_date).days
     prev_start_date = start_date - datetime.timedelta(days=period_days)
     prev_end_date = start_date - datetime.timedelta(days=1)
+    
+    # Create timezone-aware datetime objects for prev period
+    prev_start_datetime = timezone.make_aware(datetime.datetime.combine(prev_start_date, datetime.time.min))
+    prev_end_datetime = timezone.make_aware(datetime.datetime.combine(prev_end_date, datetime.time.max))
     
     # Get counts for different entities
     subscriber_count = Subscriber.objects.filter(owner=request.user).count()
@@ -129,7 +134,7 @@ def dashboard(request):
     current_subscriber_count = Subscriber.objects.filter(
         owner=request.user, 
         created_at__gte=start_date,
-        created_at__lt=end_date_inclusive
+        created_at__lt=end_date
     ).count()
     
     if prev_subscriber_count > 0:
@@ -145,7 +150,7 @@ def dashboard(request):
     current_campaign_count = Campaign.objects.filter(
         owner=request.user, 
         created_at__gte=start_date,
-        created_at__lt=end_date_inclusive
+        created_at__lt=end_date
     ).count()
     
     if prev_campaign_count > 0:
@@ -159,8 +164,8 @@ def dashboard(request):
     # Get analytics data for charts
     campaign_analytics = CampaignAnalytics.objects.filter(
         campaign__owner=request.user,
-        campaign__sent_time__gte=start_date,
-        campaign__sent_time__lt=end_date_inclusive
+        campaign__sent_time__gte=start_datetime,
+        campaign__sent_time__lt=end_datetime
     )
     
     # Calculate avg open and click rates
@@ -179,8 +184,8 @@ def dashboard(request):
     # Calculate open rate and click rate changes
     prev_campaign_analytics = CampaignAnalytics.objects.filter(
         campaign__owner=request.user,
-        campaign__sent_time__gte=prev_start_date,
-        campaign__sent_time__lt=start_date
+        campaign__sent_time__gte=prev_start_datetime,
+        campaign__sent_time__lt=start_datetime
     )
     
     if prev_campaign_analytics.exists():
@@ -455,15 +460,19 @@ def delete_subscriber(request, pk):
     return render(request, 'marketing/delete_subscriber.html', {'subscriber': subscriber})
 
 @login_required
-def import_subscribers(request):
+def import_subscribers(request, list_id=None):
     """
-    Import subscribers from CSV
+    Import subscribers from a CSV file
     """
+    # Get the list if list_id is provided
+    subscriber_list = None
+    if list_id:
+        subscriber_list = get_object_or_404(SubscriberList, pk=list_id, owner=request.user)
+    
     if request.method == 'POST':
         form = SubscriberImportForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
             csv_file = request.FILES['csv_file']
-            subscriber_list = form.cleaned_data.get('subscriber_list')
             
             # Process the CSV file
             decoded_file = csv_file.read().decode('utf-8')
@@ -500,33 +509,45 @@ def import_subscribers(request):
                     subscriber_list.subscribers.add(subscriber)
             
             # Create notification
+            if subscriber_list:
+                message = f"Imported {new_subscribers} new subscribers to list: {subscriber_list.name}"
+            else:
+                message = f"Imported {new_subscribers} new subscribers"
+                
             Notification.create_notification(
                 user=request.user,
-                message=f"Imported {new_subscribers} new subscribers from CSV",
-                notification_type='subscriber_added'
+                message=message,
+                notification_type='subscriber_import'
             )
             
             # Log activity
             UserActivity.log_activity(
                 user=request.user,
-                action='subscriber_imported',
-                description=f"Imported {new_subscribers} new subscribers from CSV ({existing_subscribers} already existed)",
+                action='subscriber_import',
+                description=message,
                 metadata={
-                    'new_count': new_subscribers,
-                    'existing_count': existing_subscribers,
+                    'imported': new_subscribers,
+                    'existing': existing_subscribers,
                     'list_id': subscriber_list.id if subscriber_list else None
                 }
             )
             
             messages.success(
                 request, 
-                f'Import completed: {new_subscribers} new subscribers added, {existing_subscribers} already existed.'
+                f'Successfully processed CSV file. Imported: {new_subscribers}, Existing: {existing_subscribers}'
             )
-            return redirect('subscriber_list')
+            
+            if subscriber_list:
+                return redirect('subscriber_list_detail', pk=subscriber_list.id)
+            else:
+                return redirect('subscribers')
     else:
         form = SubscriberImportForm(user=request.user)
     
-    return render(request, 'marketing/import_subscribers.html', {'form': form})
+    return render(request, 'marketing/import_subscribers.html', {
+        'form': form,
+        'subscriber_list': subscriber_list
+    })
 
 # Subscriber list views
 @login_required
@@ -1352,8 +1373,9 @@ def edit_ab_test(request, pk):
                 send_time_str = request.POST.get(f"{variant_prefix}send_time", '')
                 if send_time_str:
                     try:
-                        # Parse datetime from string format
-                        variant.send_time = datetime.datetime.strptime(send_time_str, '%Y-%m-%dT%H:%M')
+                        # Parse datetime from string format and make it timezone-aware
+                        naive_dt = datetime.datetime.strptime(send_time_str, '%Y-%m-%dT%H:%M')
+                        variant.send_time = timezone.make_aware(naive_dt)
                     except ValueError:
                         pass
             

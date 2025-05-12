@@ -44,6 +44,7 @@ urlpatterns = [
     path('subscribers/<int:pk>/edit/', views.edit_subscriber, name='edit_subscriber'),
     path('subscribers/<int:pk>/delete/', views.delete_subscriber, name='delete_subscriber'),
     path('subscribers/import/', views.import_subscribers, name='import_subscribers'),
+    path('subscribers/import/<int:list_id>/', views.import_subscribers, name='import_subscribers_with_list'),
     
     # Subscriber lists
     path('subscriber-lists/', views.subscriber_lists, name='subscriber_lists'),
