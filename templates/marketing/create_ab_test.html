@@ -92,7 +92,12 @@
       <h2 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b">Select Your Audience</h2>
       
       <div class="mb-6">
-        <label class="block text-sm font-medium text-gray-700 mb-2">Subscriber Lists</label>
+        <div class="flex items-center justify-between mb-2">
+          <label class="block text-sm font-medium text-gray-700">Subscriber Lists</label>
+          <a href="{% url 'subscriber_lists' %}" class="text-sm text-indigo-600 hover:text-indigo-800 flex items-center">
+            <i class="fas fa-list mr-1"></i> Manage Lists
+          </a>
+        </div>
         {% if subscriber_lists %}
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {% for list in subscriber_lists %}
@@ -109,12 +114,22 @@
             {% endfor %}
           </div>
         {% else %}
-          <p class="text-gray-500">No subscriber lists available. <a href="{% url 'create_subscriber_list' %}" class="text-blue-600 hover:underline">Create a list first</a>.</p>
+          <div class="bg-gray-50 p-4 rounded-md">
+            <p class="text-gray-500 mb-2">No subscriber lists available.</p>
+            <a href="{% url 'add_subscriber_list' %}" class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+              <i class="fas fa-plus mr-1"></i> Create a list
+            </a>
+          </div>
         {% endif %}
       </div>
       
       <div class="mb-4">
-        <label class="block text-sm font-medium text-gray-700 mb-2">Segments (Optional)</label>
+        <div class="flex items-center justify-between mb-2">
+          <label class="block text-sm font-medium text-gray-700">Segments (Optional)</label>
+          <a href="{% url 'segment_list' %}" class="text-sm text-indigo-600 hover:text-indigo-800 flex items-center">
+            <i class="fas fa-filter mr-1"></i> Manage Segments
+          </a>
+        </div>
         {% if segments %}
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {% for segment in segments %}
@@ -131,7 +146,12 @@
             {% endfor %}
           </div>
         {% else %}
-          <p class="text-gray-500">No segments available. <a href="{% url 'create_segment' %}" class="text-blue-600 hover:underline">Create a segment first</a>.</p>
+          <div class="bg-gray-50 p-4 rounded-md">
+            <p class="text-gray-500 mb-2">No segments available.</p>
+            <a href="{% url 'create_segment' %}" class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+              <i class="fas fa-plus mr-1"></i> Create a segment
+            </a>
+          </div>
         {% endif %}
       </div>
     </div>

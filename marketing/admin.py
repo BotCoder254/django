@@ -5,7 +5,8 @@ from django.db.models import Count
 from .models import (
     SubscriberList, Subscriber, Campaign, EmailTemplate,
     CampaignAnalytics, Link, EmailOpen, LinkClick,
-    EmailEvent, Notification, UserActivity
+    EmailEvent, Notification, UserActivity,
+    ABTestCampaign, ABTestVariant, Segment
 )
 from .actions import export_as_csv, export_as_json, export_as_excel
 
@@ -332,3 +333,94 @@ class UserActivityAdmin(admin.ModelAdmin):
             return obj.description
         return '-'
     get_details.short_description = 'Details'
+
+class ABTestVariantInline(admin.TabularInline):
+    model = ABTestVariant
+    extra = 0
+    fields = ('name', 'subject', 'from_name', 'from_email', 'send_time', 'delivered_count', 'open_count', 'click_count')
+    readonly_fields = ('delivered_count', 'open_count', 'click_count')
+
+@admin.register(ABTestCampaign)
+class ABTestCampaignAdmin(admin.ModelAdmin):
+    list_display = ('name', 'owner', 'test_type', 'status', 'sample_size', 'winner_criteria', 'start_time', 'created_at')
+    list_filter = ('status', 'test_type', 'winner_criteria', 'owner', 'created_at')
+    search_fields = ('name', 'description', 'owner__email')
+    readonly_fields = ('created_at', 'updated_at', 'start_time', 'winner_selected_time')
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'owner', 'description', 'test_type'),
+        }),
+        ('Test Settings', {
+            'fields': ('sample_size', 'winner_criteria', 'wait_time', 'status'),
+        }),
+        ('Audience', {
+            'fields': ('lists', 'segments'),
+        }),
+        ('Results', {
+            'fields': ('winner_variant', 'winner_selected_time'),
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at', 'start_time'),
+            'classes': ('collapse',),
+        }),
+    )
+    inlines = [ABTestVariantInline]
+    actions = ['mark_as_setup', 'mark_as_cancelled', export_as_csv, export_as_json, export_as_excel]
+    
+    def mark_as_setup(self, request, queryset):
+        updated = queryset.update(status='setup')
+        self.message_user(request, f'{updated} A/B tests were reset to setup status.')
+    mark_as_setup.short_description = "Reset selected A/B tests to setup status"
+    
+    def mark_as_cancelled(self, request, queryset):
+        updated = queryset.update(status='cancelled')
+        self.message_user(request, f'{updated} A/B tests were marked as cancelled.')
+    mark_as_cancelled.short_description = "Mark selected A/B tests as cancelled"
+
+@admin.register(ABTestVariant)
+class ABTestVariantAdmin(admin.ModelAdmin):
+    list_display = ('name', 'ab_test', 'open_rate', 'click_rate', 'is_winner')
+    list_filter = ('ab_test__status', 'ab_test__test_type')
+    search_fields = ('name', 'ab_test__name', 'subject', 'from_name', 'from_email')
+    readonly_fields = ('created_at', 'delivered_count', 'open_count', 'click_count', 'open_rate', 'click_rate')
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'ab_test'),
+        }),
+        ('Variant Content', {
+            'fields': ('subject', 'content', 'html_content', 'from_name', 'from_email', 'send_time'),
+        }),
+        ('Performance', {
+            'fields': ('delivered_count', 'open_count', 'click_count', 'open_rate', 'click_rate'),
+        }),
+        ('Timestamps', {
+            'fields': ('created_at',),
+            'classes': ('collapse',),
+        }),
+    )
+    
+    def is_winner(self, obj):
+        if obj.ab_test and obj.ab_test.winner_variant == obj:
+            return format_html('<span style="color: green;"><i class="fas fa-trophy"></i> Winner</span>')
+        return ''
+    is_winner.short_description = 'Winner'
+
+@admin.register(Segment)
+class SegmentAdmin(admin.ModelAdmin):
+    list_display = ('name', 'owner', 'condition_type', 'created_at')
+    list_filter = ('condition_type', 'owner', 'created_at')
+    search_fields = ('name', 'description', 'owner__email')
+    readonly_fields = ('created_at', 'updated_at')
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'owner', 'description', 'condition_type'),
+        }),
+        ('Conditions', {
+            'fields': ('conditions',),
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',),
+        }),
+    )
+    actions = [export_as_csv, export_as_json]
