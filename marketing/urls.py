@@ -43,6 +43,7 @@ urlpatterns = [
     path('subscribers/add/', views.add_subscriber, name='add_subscriber'),
     path('subscribers/<int:pk>/edit/', views.edit_subscriber, name='edit_subscriber'),
     path('subscribers/<int:pk>/delete/', views.delete_subscriber, name='delete_subscriber'),
+    path('subscribers/<int:pk>/activity/', views.subscriber_activity, name='subscriber_activity'),
     path('subscribers/import/', views.import_subscribers, name='import_subscribers'),
     path('subscribers/import/<int:list_id>/', views.import_subscribers, name='import_subscribers_with_list'),
     
@@ -68,6 +69,7 @@ urlpatterns = [
     path('campaigns/<int:pk>/edit/', views.edit_campaign, name='edit_campaign'),
     path('campaigns/<int:pk>/delete/', views.delete_campaign, name='delete_campaign'),
     path('campaigns/<int:pk>/schedule/', views.schedule_campaign, name='schedule_campaign'),
+    path('campaigns/<int:pk>/cancel/', views.cancel_campaign, name='cancel_campaign'),
     path('campaigns/<int:pk>/send/', views.send_campaign, name='send_campaign'),
     path('campaigns/<int:pk>/analytics/', views.campaign_analytics, name='campaign_analytics'),
 ] 

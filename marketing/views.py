@@ -1685,4 +1685,73 @@ def delete_segment(request, pk):
         messages.success(request, 'Segment deleted successfully.')
         return redirect('segment_list')
     
-    return render(request, 'marketing/delete_segment.html', {'segment': segment}) 
+    return render(request, 'marketing/delete_segment.html', {'segment': segment})
+
+@login_required
+def cancel_campaign(request, pk):
+    """
+    Cancel a scheduled campaign
+    """
+    campaign = get_object_or_404(Campaign, pk=pk, owner=request.user)
+    
+    # Only allow cancellation if campaign is in scheduled status
+    if campaign.status != 'scheduled':
+        messages.error(request, 'You can only cancel campaigns that are scheduled.')
+        return redirect('campaign_detail', pk=campaign.pk)
+    
+    if request.method == 'POST':
+        campaign.status = 'draft'
+        campaign.schedule_time = None
+        campaign.save()
+        
+        # Create notification
+        Notification.create_notification(
+            user=request.user,
+            message=f"Campaign cancelled: {campaign.name}",
+            notification_type='system',
+            related_object=campaign
+        )
+        
+        # Log activity
+        UserActivity.log_activity(
+            user=request.user,
+            action='other',
+            description=f"Cancelled scheduled campaign: {campaign.name}",
+            metadata={'campaign_id': campaign.id}
+        )
+        
+        messages.success(request, 'Campaign schedule cancelled successfully.')
+        return redirect('campaign_detail', pk=campaign.pk)
+    
+    return render(request, 'marketing/cancel_campaign.html', {
+        'campaign': campaign
+    })
+
+@login_required
+def subscriber_activity(request, pk):
+    """
+    View activity for a specific subscriber
+    """
+    subscriber = get_object_or_404(Subscriber, pk=pk, owner=request.user)
+    
+    # Get all events for this subscriber
+    events = EmailEvent.objects.filter(subscriber=subscriber).order_by('-timestamp')
+    
+    # Get all opens
+    opens = EmailOpen.objects.filter(subscriber=subscriber).order_by('-timestamp')
+    
+    # Get all link clicks
+    clicks = LinkClick.objects.filter(subscriber=subscriber).order_by('-timestamp')
+    
+    # Paginate events
+    paginator = Paginator(events, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'marketing/subscriber_activity.html', {
+        'subscriber': subscriber,
+        'events': page_obj,
+        'opens_count': opens.count(),
+        'clicks_count': clicks.count(),
+        'campaigns_count': events.values('campaign').distinct().count()
+    }) 

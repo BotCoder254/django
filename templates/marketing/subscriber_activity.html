@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Subscriber Activity - {{ subscriber.email }} - EmailPro{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-6">
+        <a href="{% url 'subscriber_list' %}" class="inline-flex items-center text-indigo-600 hover:text-indigo-800">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Subscribers
+        </a>
+    </div>
+
+    <!-- Subscriber Info -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
+        <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">
+                    {{ subscriber.email }}
+                </h1>
+                <p class="mt-1 text-sm text-gray-500">
+                    Subscriber activity and engagement history
+                </p>
+            </div>
+            <div>
+                <a href="{% url 'edit_subscriber' pk=subscriber.id %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <i class="fas fa-edit mr-2"></i> Edit Subscriber
+                </a>
+            </div>
+        </div>
+        <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
+            <dl class="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-3">
+                <div class="sm:col-span-1">
+                    <dt class="text-sm font-medium text-gray-500">Name</dt>
+                    <dd class="mt-1 text-sm text-gray-900">
+                        {% if subscriber.first_name or subscriber.last_name %}
+                            {{ subscriber.first_name }} {{ subscriber.last_name }}
+                        {% else %}
+                            <span class="text-gray-400">Not provided</span>
+                        {% endif %}
+                    </dd>
+                </div>
+                <div class="sm:col-span-1">
+                    <dt class="text-sm font-medium text-gray-500">Status</dt>
+                    <dd class="mt-1 text-sm text-gray-900">
+                        {% if subscriber.is_active %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Active
+                            </span>
+                        {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                Inactive
+                            </span>
+                        {% endif %}
+                    </dd>
+                </div>
+                <div class="sm:col-span-1">
+                    <dt class="text-sm font-medium text-gray-500">Joined</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ subscriber.created_at|date:"M d, Y" }}</dd>
+                </div>
+                <div class="sm:col-span-1">
+                    <dt class="text-sm font-medium text-gray-500">Location</dt>
+                    <dd class="mt-1 text-sm text-gray-900">
+                        {% if subscriber.country or subscriber.city %}
+                            {% if subscriber.city %}{{ subscriber.city }}{% endif %}
+                            {% if subscriber.city and subscriber.country %}, {% endif %}
+                            {% if subscriber.country %}{{ subscriber.country }}{% endif %}
+                        {% else %}
+                            <span class="text-gray-400">Not available</span>
+                        {% endif %}
+                    </dd>
+                </div>
+                <div class="sm:col-span-1">
+                    <dt class="text-sm font-medium text-gray-500">Lists</dt>
+                    <dd class="mt-1 text-sm text-gray-900">
+                        {% if subscriber.lists.all %}
+                            <div class="flex flex-wrap gap-1">
+                                {% for list in subscriber.lists.all %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                        {{ list.name }}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <span class="text-gray-400">Not in any list</span>
+                        {% endif %}
+                    </dd>
+                </div>
+                <div class="sm:col-span-1">
+                    <dt class="text-sm font-medium text-gray-500">Last Updated</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ subscriber.updated_at|date:"M d, Y" }}</dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+
+    <!-- Activity Summary -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+            <div class="px-4 py-5 sm:p-6 text-center">
+                <div class="text-3xl font-semibold text-indigo-600 mb-1">{{ opens_count }}</div>
+                <div class="text-sm font-medium text-gray-500">Email Opens</div>
+            </div>
+        </div>
+        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+            <div class="px-4 py-5 sm:p-6 text-center">
+                <div class="text-3xl font-semibold text-indigo-600 mb-1">{{ clicks_count }}</div>
+                <div class="text-sm font-medium text-gray-500">Link Clicks</div>
+            </div>
+        </div>
+        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+            <div class="px-4 py-5 sm:p-6 text-center">
+                <div class="text-3xl font-semibold text-indigo-600 mb-1">{{ campaigns_count }}</div>
+                <div class="text-sm font-medium text-gray-500">Campaigns Received</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Timeline -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+            <h2 class="text-lg font-medium text-gray-900">Activity Timeline</h2>
+            <p class="mt-1 text-sm text-gray-500">Chronological history of subscriber engagement</p>
+        </div>
+        <div class="border-t border-gray-200">
+            {% if events %}
+                <ul class="divide-y divide-gray-200">
+                    {% for event in events %}
+                        <li class="px-4 py-4 sm:px-6">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0 mt-1">
+                                    {% if event.event_type == 'sent' %}
+                                        <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-gray-100">
+                                            <i class="fas fa-paper-plane text-gray-500"></i>
+                                        </span>
+                                    {% elif event.event_type == 'delivered' %}
+                                        <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-blue-100">
+                                            <i class="fas fa-inbox text-blue-500"></i>
+                                        </span>
+                                    {% elif event.event_type == 'opened' %}
+                                        <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-green-100">
+                                            <i class="fas fa-envelope-open text-green-500"></i>
+                                        </span>
+                                    {% elif event.event_type == 'clicked' %}
+                                        <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-indigo-100">
+                                            <i class="fas fa-mouse-pointer text-indigo-500"></i>
+                                        </span>
+                                    {% elif event.event_type == 'bounced' %}
+                                        <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-red-100">
+                                            <i class="fas fa-exclamation-triangle text-red-500"></i>
+                                        </span>
+                                    {% elif event.event_type == 'complained' %}
+                                        <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-red-100">
+                                            <i class="fas fa-flag text-red-500"></i>
+                                        </span>
+                                    {% elif event.event_type == 'unsubscribed' %}
+                                        <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-yellow-100">
+                                            <i class="fas fa-user-slash text-yellow-500"></i>
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-gray-100">
+                                            <i class="fas fa-info-circle text-gray-500"></i>
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                <div class="ml-4 flex-1">
+                                    <div class="font-medium text-gray-900">
+                                        {{ event.event_type|title }}
+                                        <a href="{% url 'campaign_detail' pk=event.campaign.pk %}" class="text-indigo-600 hover:text-indigo-800">
+                                            {{ event.campaign.name }}
+                                        </a>
+                                    </div>
+                                    <div class="mt-1 text-sm text-gray-500">
+                                        {{ event.timestamp|date:"M d, Y H:i" }}
+                                    </div>
+                                    {% if event.metadata %}
+                                        <div class="mt-2 text-sm text-gray-700 bg-gray-50 p-2 rounded">
+                                            <pre class="whitespace-pre-wrap">{{ event.metadata }}</pre>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+                
+                <!-- Pagination -->
+                {% if events.has_other_pages %}
+                    <div class="px-4 py-3 bg-gray-50 text-sm text-gray-500 sm:px-6">
+                        <nav class="flex justify-between">
+                            {% if events.has_previous %}
+                                <a href="?page={{ events.previous_page_number }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    Previous
+                                </a>
+                            {% else %}
+                                <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-300 bg-white cursor-not-allowed">
+                                    Previous
+                                </span>
+                            {% endif %}
+                            
+                            <span class="relative inline-flex items-center px-4 py-2 text-sm text-gray-700">
+                                Page {{ events.number }} of {{ events.paginator.num_pages }}
+                            </span>
+                            
+                            {% if events.has_next %}
+                                <a href="?page={{ events.next_page_number }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    Next
+                                </a>
+                            {% else %}
+                                <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-300 bg-white cursor-not-allowed">
+                                    Next
+                                </span>
+                            {% endif %}
+                        </nav>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="px-4 py-12 text-center">
+                    <div class="text-center">
+                        <i class="fas fa-inbox text-gray-300 text-4xl mb-4"></i>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">No Activity Yet</h3>
+                        <p class="text-sm text-gray-500">
+                            This subscriber hasn't interacted with any campaigns yet.
+                        </p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

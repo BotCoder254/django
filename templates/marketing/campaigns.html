@@ -94,7 +94,7 @@
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold text-gray-800">Email Campaigns</h1>
         <div class="flex gap-3">
-            <a href="{% url 'create_campaign' %}" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+            <a href="{% url 'add_campaign' %}" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
                 <i class="fas fa-plus mr-1"></i> Create Campaign
             </a>
         </div>
@@ -163,7 +163,7 @@
                                 </a>
                                 {% endif %}
                                 {% if campaign.status == 'SENT' %}
-                                <a href="{% url 'campaign_report' pk=campaign.id %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
+                                <a href="{% url 'campaign_analytics' pk=campaign.id %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
                                     <i class="fas fa-chart-bar mr-2"></i> View Report
                                 </a>
                                 {% endif %}
@@ -231,7 +231,7 @@
         </div>
         <h3 class="text-lg font-medium text-gray-900 mb-2">No Campaigns Yet</h3>
         <p class="text-gray-500 mb-6">Get started by creating your first email campaign</p>
-        <a href="{% url 'create_campaign' %}" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+        <a href="{% url 'add_campaign' %}" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
             Create Your First Campaign
         </a>
     </div>
