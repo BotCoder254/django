@@ -5,118 +5,163 @@
 {% block title %}Import Subscribers - EmailPro{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Header -->
-    <div class="md:flex md:items-center md:justify-between mb-6">
-        <div class="flex-1 min-w-0">
-            <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
-                Import Subscribers
-            </h2>
-            <p class="mt-1 text-sm text-gray-500">
-                Import multiple subscribers from a CSV file
-            </p>
-        </div>
-        <div class="mt-4 flex md:mt-0 md:ml-4">
-            <a href="{% url 'subscriber_list' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                <i class="fas fa-arrow-left mr-2"></i> Back to Subscribers
-            </a>
+<div class="container max-w-2xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Import Subscribers</h1>
+        {% if subscriber_list %}
+        <a href="{% url 'subscriber_list_detail' pk=subscriber_list.id %}" class="text-indigo-600 hover:text-indigo-800">
+            <i class="fas fa-arrow-left mr-1"></i> Back to "{{ subscriber_list.name }}"
+        </a>
+        {% else %}
+        <a href="{% url 'subscriber_list' %}" class="text-indigo-600 hover:text-indigo-800">
+            <i class="fas fa-arrow-left mr-1"></i> Back to Subscribers
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="p-6">
+            {% if subscriber_list %}
+            <form method="post" enctype="multipart/form-data" class="space-y-6">
+                {% csrf_token %}
+                <div>
+                    <p class="mb-4 text-gray-600">
+                        Import subscribers to the list: <span class="font-semibold">{{ subscriber_list.name }}</span>
+                    </p>
+                </div>
+                <div>
+                    <label for="{{ form.csv_file.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        CSV File *
+                    </label>
+                    <div class="mt-1">
+                        <input type="file" name="csv_file" id="csv_file" accept=".csv" 
+                               class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" required>
+                    </div>
+                    {% if form.csv_file.errors %}
+                    <p class="mt-2 text-sm text-red-600">{{ form.csv_file.errors }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-500">
+                        Your CSV file should have the following headers: email (required), first_name, last_name (optional)
+                    </p>
+                </div>
+                
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-info-circle text-blue-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-blue-700">
+                                Your subscribers will be added to <strong>{{ subscriber_list.name }}</strong>. 
+                                Existing subscribers will be updated with the new information from the CSV.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3 pt-4">
+                    {% if subscriber_list %}
+                    <a href="{% url 'subscriber_list_detail' pk=subscriber_list.id %}" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Cancel
+                    </a>
+                    {% else %}
+                    <a href="{% url 'subscriber_list' %}" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Cancel
+                    </a>
+                    {% endif %}
+                    <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Import Subscribers
+                    </button>
+                </div>
+            </form>
+            {% else %}
+            <form method="post" enctype="multipart/form-data" class="space-y-6">
+                {% csrf_token %}
+                <div>
+                    <label for="{{ form.csv_file.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        CSV File *
+                    </label>
+                    <div class="mt-1">
+                        <input type="file" name="csv_file" id="csv_file" accept=".csv" 
+                               class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" required>
+                    </div>
+                    {% if form.csv_file.errors %}
+                    <p class="mt-2 text-sm text-red-600">{{ form.csv_file.errors }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-500">
+                        Your CSV file should have the following headers: email (required), first_name, last_name (optional)
+                    </p>
+                </div>
+                
+                <div>
+                    <label for="{{ form.subscriber_list.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        Add to Subscriber List (optional)
+                    </label>
+                    <div class="mt-1">
+                        <select name="subscriber_list" id="subscriber_list" 
+                                class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                            <option value="">-- Select a List --</option>
+                            {% for list in form.subscriber_list.field.queryset %}
+                            <option value="{{ list.id }}" {% if form.subscriber_list.value == list.id %}selected{% endif %}>
+                                {{ list.name }} ({{ list.subscriber_count }} subscribers)
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% if form.subscriber_list.errors %}
+                    <p class="mt-2 text-sm text-red-600">{{ form.subscriber_list.errors }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-500">
+                        If selected, imported subscribers will be added to this list. Leave blank to just import them to your database.
+                    </p>
+                </div>
+                
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-info-circle text-blue-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-blue-700">
+                                Existing subscribers will be updated with the new information from the CSV.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3 pt-4">
+                    <a href="{% url 'subscriber_list' %}" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Cancel
+                    </a>
+                    <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Import Subscribers
+                    </button>
+                </div>
+            </form>
+            {% endif %}
         </div>
     </div>
     
-    <!-- Import Form -->
-    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
-        <div class="px-4 py-5 sm:p-6">
-            <form method="post" enctype="multipart/form-data">
-                {% csrf_token %}
-                
-                <div class="space-y-6">
-                    <div>
-                        <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">CSV File Upload</h3>
-                        <p class="text-sm text-gray-500 mb-4">
-                            Upload a CSV file with subscriber information. The file must include an 'email' column. 
-                            Additional columns like 'first_name' and 'last_name' will also be imported if present.
-                        </p>
-                        
-                        <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                            <div class="space-y-1 text-center">
-                                <i class="fas fa-file-csv text-gray-400 text-4xl mb-2"></i>
-                                <div class="flex text-sm text-gray-600">
-                                    <label for="{{ form.csv_file.id_for_label }}" class="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500">
-                                        <span>Upload a CSV file</span>
-                                        {{ form.csv_file }}
-                                    </label>
-                                </div>
-                                <p class="text-xs text-gray-500">
-                                    Required headers: email
-                                    <br>
-                                    Optional headers: first_name, last_name
-                                </p>
-                            </div>
-                        </div>
-                        {% if form.csv_file.errors %}
-                        <p class="mt-2 text-sm text-red-600">
-                            {{ form.csv_file.errors|join:", " }}
-                        </p>
-                        {% endif %}
-                    </div>
-                    
-                    <div>
-                        <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">Target List</h3>
-                        <p class="text-sm text-gray-500 mb-4">
-                            Select a subscriber list to add imported subscribers to. If none is selected, 
-                            subscribers will be imported without being added to any list.
-                        </p>
-                        
-                        <div class="mt-1">
-                            {{ form.subscriber_list }}
-                        </div>
-                        {% if form.subscriber_list.errors %}
-                        <p class="mt-2 text-sm text-red-600">
-                            {{ form.subscriber_list.errors|join:", " }}
-                        </p>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Example CSV Format -->
-                    <div>
-                        <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">Example CSV Format</h3>
-                        <div class="bg-gray-50 p-4 rounded-md overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">email</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">first_name</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">last_name</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    <tr>
-                                        <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-500">user1@example.com</td>
-                                        <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-500">John</td>
-                                        <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-500">Doe</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-500">user2@example.com</td>
-                                        <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-500">Jane</td>
-                                        <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-500">Smith</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="pt-5 mt-6 border-t border-gray-200">
-                    <div class="flex justify-end space-x-3">
-                        <a href="{% url 'subscriber_list' %}" class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                            Cancel
-                        </a>
-                        <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                            Import Subscribers
-                        </button>
-                    </div>
-                </div>
-            </form>
+    <div class="mt-8 bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">CSV Format Guidelines</h2>
+            <p class="mb-4 text-gray-600">
+                Your CSV file should follow these guidelines:
+            </p>
+            <ul class="list-disc list-inside text-gray-600 space-y-2 mb-4">
+                <li>The first row should contain column headers</li>
+                <li>The <code class="bg-gray-100 px-1 rounded">email</code> column is required</li>
+                <li>Optional columns: <code class="bg-gray-100 px-1 rounded">first_name</code>, <code class="bg-gray-100 px-1 rounded">last_name</code>, <code class="bg-gray-100 px-1 rounded">country</code>, <code class="bg-gray-100 px-1 rounded">city</code></li>
+                <li>An <code class="bg-gray-100 px-1 rounded">is_active</code> column can be used (values: true/false, yes/no, 1/0)</li>
+            </ul>
+            
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">Example CSV Format:</h3>
+            <div class="overflow-x-auto bg-gray-100 p-4 rounded-md">
+                <pre class="text-sm text-gray-700">email,first_name,last_name,country,city,is_active
+john@example.com,John,Doe,USA,New York,true
+jane@example.com,Jane,Smith,Canada,Toronto,true
+customer@example.com,,,UK,London,true</pre>
+            </div>
         </div>
     </div>
 </div>

@@ -1,211 +1,615 @@
 {% extends 'base.html' %}
 {% load static %}
-{% load user_tags %}
 
-{% block title %}{% if template %}Edit{% else %}Create{% endif %} Email Template - EmailPro{% endblock %}
+{% block title %}Email Editor - EmailPro{% endblock %}
 
 {% block extra_css %}
-<link href="{% static 'css/grapesjs.min.css' %}" rel="stylesheet">
-<link href="{% static 'css/grapesjs-preset-newsletter.min.css' %}" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/tinymce@5/skins/ui/oxide/skin.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/tinymce@5/skins/ui/oxide/content.min.css" rel="stylesheet">
 <style>
-    #gjs {
-        border: 3px solid #444;
-        height: calc(100vh - 200px);
-        min-height: 400px;
+    .template-card {
+        cursor: pointer;
+        transition: all 0.2s ease;
     }
-    /* Override grapesjs default styles */
-    .gjs-one-bg {
-        background-color: #f3f4f6 !important;
+    .template-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     }
-    .gjs-two-color {
-        color: #4f46e5 !important;
+    .template-card.selected {
+        border: 2px solid #4f46e5;
     }
-    .gjs-four-color {
-        color: #4f46e5 !important;
+    #emailSubjectField {
+        border: 1px solid #e5e7eb;
+        transition: border-color 0.15s ease-in-out;
     }
-    .gjs-four-color-h:hover {
-        color: #4338ca !important;
+    #emailSubjectField:focus {
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+    .tox-tinymce {
+        border-radius: 0.375rem;
+    }
+    .tox .tox-menubar {
+        background-color: #f9fafb;
+    }
+    .preview-frame {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.375rem;
+        width: 100%;
+        height: 500px;
+        background: white;
+    }
+    .tab-button {
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s ease;
+    }
+    .tab-button.active {
+        border-bottom: 2px solid #4f46e5;
+        color: #4f46e5;
+    }
+    .tab-content {
+        display: none;
+    }
+    .tab-content.active {
+        display: block;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-    <!-- Header -->
-    <div class="md:flex md:items-center md:justify-between mb-6">
-        <div class="flex-1 min-w-0">
-            <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
-                {% if template %}Edit{% else %}Create{% endif %} Email Template
-            </h2>
-            <p class="mt-1 text-sm text-gray-500">
-                Use the visual editor to design your email template
-            </p>
-        </div>
-        <div class="mt-4 flex md:mt-0 md:ml-4">
-            <a href="{% url 'email_templates' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                <i class="fas fa-arrow-left mr-2"></i> Back to Templates
+<div class="container max-w-6xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Email Editor</h1>
+        <div class="flex gap-3">
+            <a href="{% url 'email_templates' %}" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                Cancel
             </a>
-            <button id="save-template" type="button" class="ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                <i class="fas fa-save mr-2"></i> Save Template
+            <button id="saveTemplateBtn" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                Save Template
             </button>
         </div>
     </div>
 
-    <!-- Save Template Modal -->
-    <div id="save-modal" class="fixed z-10 inset-0 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <!-- Background overlay -->
-            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
-            
-            <!-- Modal panel -->
-            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                <form id="save-form" method="post" action="{% if template %}{% url 'edit_email_template' pk=template.pk %}{% else %}{% url 'add_email_template' %}{% endif %}">
-                    {% csrf_token %}
-                    <input type="hidden" id="html_content" name="html_content" value="">
-                    
-                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                        <div class="sm:flex sm:items-start">
-                            <div class="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                                <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                                    Save Email Template
-                                </h3>
-                                <div class="mt-4 space-y-4">
-                                    <div>
-                                        <label for="name" class="block text-sm font-medium text-gray-700">Template Name</label>
-                                        <input type="text" name="name" id="name" class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md h-10" value="{{ template.name|default:'' }}">
-                                    </div>
-                                    <div>
-                                        <label for="subject" class="block text-sm font-medium text-gray-700">Subject Line</label>
-                                        <input type="text" name="subject" id="subject" class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md h-10" value="{{ template.subject|default:'' }}">
-                                    </div>
-                                    <div>
-                                        <label for="content" class="block text-sm font-medium text-gray-700">Plain Text Version (Optional)</label>
-                                        <textarea name="content" id="content" rows="4" class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md min-h-[100px]">{{ template.content|default:'' }}</textarea>
-                                        <p class="mt-1 text-xs text-gray-500">A plain text version is recommended for email clients that don't support HTML.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                        <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm">
-                            Save Template
-                        </button>
-                        <button type="button" id="close-modal" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-                            Cancel
-                        </button>
-                    </div>
-                </form>
+    <!-- Editor Tabs -->
+    <div class="mb-6 border-b border-gray-200">
+        <div class="flex space-x-4">
+            <button id="editorTab" class="tab-button active">Editor</button>
+            <button id="previewTab" class="tab-button">Preview</button>
+            <button id="templateTab" class="tab-button">Templates</button>
+        </div>
+    </div>
+
+    <!-- Template Name & Subject -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="templateNameField" class="block text-sm font-medium text-gray-700 mb-1">Template Name</label>
+                <input type="text" id="templateNameField" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" 
+                       value="{{ template.name|default:'' }}" placeholder="Enter template name">
+            </div>
+            <div>
+                <label for="emailSubjectField" class="block text-sm font-medium text-gray-700 mb-1">Email Subject</label>
+                <input type="text" id="emailSubjectField" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" 
+                       value="{{ template.subject|default:'' }}" placeholder="Enter email subject">
             </div>
         </div>
     </div>
 
-    <!-- Editor -->
-    <div id="gjs"></div>
+    <!-- Tab Content -->
+    <div id="editorTabContent" class="tab-content active">
+        <!-- Email Editor Area -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <textarea id="emailEditor">{{ template.html_content|default:'' }}</textarea>
+        </div>
+    </div>
+
+    <div id="previewTabContent" class="tab-content">
+        <!-- Email Preview Area -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-lg font-semibold mb-4">Email Preview</h2>
+            <div class="border rounded-md p-2 bg-gray-50">
+                <p class="text-sm font-medium text-gray-700">Subject: <span id="previewSubject">{{ template.subject|default:'Your Email Subject' }}</span></p>
+            </div>
+            <div class="mt-4">
+                <iframe id="previewFrame" class="preview-frame"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <div id="templateTabContent" class="tab-content">
+        <!-- Template Gallery -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-lg font-semibold mb-4">Email Templates</h2>
+            <p class="text-gray-600 mb-6">Select a template to start with, or continue with your current design.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Basic Template -->
+                <div class="template-card border rounded-lg overflow-hidden" data-template="basic">
+                    <div class="h-40 bg-gray-100 relative overflow-hidden">
+                        <img src="https://via.placeholder.com/400x200?text=Basic+Template" alt="Basic Template" class="w-full h-full object-cover">
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-medium">Basic Template</h3>
+                        <p class="text-sm text-gray-500">A simple, clean email layout</p>
+                    </div>
+                </div>
+
+                <!-- Welcome Template -->
+                <div class="template-card border rounded-lg overflow-hidden" data-template="welcome">
+                    <div class="h-40 bg-gray-100 relative overflow-hidden">
+                        <img src="https://via.placeholder.com/400x200?text=Welcome+Email" alt="Welcome Email" class="w-full h-full object-cover">
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-medium">Welcome Email</h3>
+                        <p class="text-sm text-gray-500">Perfect for onboarding new subscribers</p>
+                    </div>
+                </div>
+
+                <!-- Newsletter Template -->
+                <div class="template-card border rounded-lg overflow-hidden" data-template="newsletter">
+                    <div class="h-40 bg-gray-100 relative overflow-hidden">
+                        <img src="https://via.placeholder.com/400x200?text=Newsletter" alt="Newsletter" class="w-full h-full object-cover">
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-medium">Newsletter</h3>
+                        <p class="text-sm text-gray-500">Multi-column newsletter layout</p>
+                    </div>
+                </div>
+
+                <!-- Promotion Template -->
+                <div class="template-card border rounded-lg overflow-hidden" data-template="promotion">
+                    <div class="h-40 bg-gray-100 relative overflow-hidden">
+                        <img src="https://via.placeholder.com/400x200?text=Promotion" alt="Promotion" class="w-full h-full object-cover">
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-medium">Promotion</h3>
+                        <p class="text-sm text-gray-500">Highlight products or offers</p>
+                    </div>
+                </div>
+
+                <!-- Announcement Template -->
+                <div class="template-card border rounded-lg overflow-hidden" data-template="announcement">
+                    <div class="h-40 bg-gray-100 relative overflow-hidden">
+                        <img src="https://via.placeholder.com/400x200?text=Announcement" alt="Announcement" class="w-full h-full object-cover">
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-medium">Announcement</h3>
+                        <p class="text-sm text-gray-500">For company news and updates</p>
+                    </div>
+                </div>
+
+                <!-- From Scratch -->
+                <div class="template-card border rounded-lg overflow-hidden" data-template="blank">
+                    <div class="h-40 bg-gray-100 relative overflow-hidden flex items-center justify-center">
+                        <i class="fas fa-plus text-4xl text-gray-400"></i>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-medium">Blank Template</h3>
+                        <p class="text-sm text-gray-500">Start from scratch</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template ID (hidden) -->
+    <input type="hidden" id="templateId" value="{{ template.id|default:'' }}">
 </div>
 
-<!-- Template content for the starter template -->
-<script id="starter-template" type="text/template">
-<table style="min-height:150px; width:100%; margin: 0 auto; background-color: #ffffff; padding: 20px;" cellpadding="0" cellspacing="0">
-    <tr>
-        <td style="text-align: center; font-family: Arial, sans-serif; font-size: 20px; color: #333333; padding: 20px;">
-            <h1 style="margin-bottom: 10px;">Welcome to your new template</h1>
-            <p style="font-size: 16px; line-height: 1.5;">Drag and drop elements to build your email</p>
-        </td>
-    </tr>
-</table>
-</script>
-
-{% if template and template.html_content %}
-<script id="template-html-content" type="text/template">
-{{ template.html_content|escapejs }}
-</script>
-{% endif %}
-
+<!-- Save Template Modal -->
+<div id="saveModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3 text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
+                <i class="fas fa-check text-green-600 text-xl"></i>
+            </div>
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mt-2">Template Saved!</h3>
+            <div class="mt-2 px-7 py-3">
+                <p class="text-sm text-gray-500">
+                    Your email template has been saved successfully.
+                </p>
+            </div>
+            <div class="items-center px-4 py-3">
+                <button id="closeModalBtn" class="px-4 py-2 bg-indigo-600 text-white text-base font-medium rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/grapesjs.min.js' %}"></script>
-<script src="{% static 'js/grapesjs-preset-newsletter.min.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/tinymce@5/tinymce.min.js" referrerpolicy="origin"></script>
 <script>
+    // Template content
+    const templateContent = {
+        basic: `<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #f8f9fa; padding: 20px; text-align: center; }
+        .content { padding: 20px; }
+        .footer { background-color: #f8f9fa; padding: 10px; text-align: center; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Your Email Title</h1>
+        </div>
+        <div class="content">
+            <p>Hello,</p>
+            <p>This is a basic email template. Edit it to create your own custom email.</p>
+            <p>Best regards,<br>Your Name</p>
+        </div>
+        <div class="footer">
+            &copy; 2023 Your Company. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>`,
+        welcome: `<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+        .header { background-color: #4f46e5; padding: 30px; text-align: center; color: white; }
+        .content { padding: 30px; }
+        .button { display: inline-block; background-color: #4f46e5; color: white; text-decoration: none; padding: 12px 24px; border-radius: 4px; margin-top: 20px; }
+        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Welcome to EmailPro!</h1>
+        </div>
+        <div class="content">
+            <h2>Hi there,</h2>
+            <p>Thank you for joining EmailPro. We're excited to have you on board!</p>
+            <p>With EmailPro, you can:</p>
+            <ul>
+                <li>Create beautiful email campaigns</li>
+                <li>Segment your audience</li>
+                <li>Track performance with analytics</li>
+                <li>Automate your email marketing</li>
+            </ul>
+            <p>If you have any questions, feel free to reach out to our support team.</p>
+            <a href="#" class="button">Get Started</a>
+        </div>
+        <div class="footer">
+            <p>&copy; 2023 EmailPro. All rights reserved.</p>
+            <p>123 Email Street, Marketing City, 12345</p>
+        </div>
+    </div>
+</body>
+</html>`,
+        newsletter: `<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+        .header { background-color: #f8f9fa; padding: 20px; text-align: center; }
+        .headline { padding: 20px; background-color: #eef2ff; border-left: 4px solid #4f46e5; margin: 20px 0; }
+        .columns { display: table; width: 100%; }
+        .column { display: table-cell; width: 50%; padding: 10px; }
+        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #666; }
+        .button { display: inline-block; background-color: #4f46e5; color: white; text-decoration: none; padding: 10px 20px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Monthly Newsletter</h1>
+            <p>April 2023 Edition</p>
+        </div>
+        
+        <div class="headline">
+            <h2>This Month's Highlights</h2>
+            <p>The biggest news and updates from our company this month.</p>
+        </div>
+        
+        <div class="columns">
+            <div class="column">
+                <h3>Product Updates</h3>
+                <p>We've launched several new features this month to improve your experience.</p>
+                <a href="#" class="button">Learn More</a>
+            </div>
+            <div class="column">
+                <h3>Upcoming Events</h3>
+                <p>Join us for our webinar series on email marketing best practices.</p>
+                <a href="#" class="button">Register Now</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>&copy; 2023 Your Company. All rights reserved.</p>
+            <p><a href="#">Unsubscribe</a> | <a href="#">View in Browser</a></p>
+        </div>
+    </div>
+</body>
+</html>`,
+        promotion: `<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+        .header { background-color: #f5f3ff; padding: 30px; text-align: center; }
+        .content { padding: 30px; }
+        .offer { background-color: #4f46e5; color: white; padding: 20px; text-align: center; font-size: 24px; margin: 20px 0; }
+        .product { border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
+        .button { display: inline-block; background-color: #4f46e5; color: white; text-decoration: none; padding: 12px 24px; border-radius: 4px; }
+        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Special Offer Just For You!</h1>
+        </div>
+        
+        <div class="content">
+            <p>Dear Customer,</p>
+            <p>We have an exclusive offer that you won't want to miss!</p>
+            
+            <div class="offer">
+                20% OFF ALL PRODUCTS
+            </div>
+            
+            <div class="product">
+                <h3>Premium Plan</h3>
+                <p>Our most popular plan with advanced features for serious marketers.</p>
+                <a href="#" class="button">Get Discount</a>
+            </div>
+            
+            <div class="product">
+                <h3>Pro Plan</h3>
+                <p>Perfect for growing businesses looking to expand their email marketing.</p>
+                <a href="#" class="button">Get Discount</a>
+            </div>
+            
+            <p>This offer expires in 48 hours, so act fast!</p>
+        </div>
+        
+        <div class="footer">
+            <p>&copy; 2023 Your Company. All rights reserved.</p>
+            <p><a href="#">Unsubscribe</a> | <a href="#">View in Browser</a></p>
+        </div>
+    </div>
+</body>
+</html>`,
+        announcement: `<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+        .container { max-width:.container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+        .header { background-color: #4f46e5; padding: 30px; text-align: center; color: white; }
+        .content { padding: 30px; }
+        .announcement { background-color: #f1f5f9; border-left: 4px solid #4f46e5; padding: 20px; margin: 20px 0; }
+        .button { display: inline-block; background-color: #4f46e5; color: white; text-decoration: none; padding: 12px 24px; border-radius: 4px; }
+        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Important Announcement</h1>
+        </div>
+        
+        <div class="content">
+            <p>Dear Valued Customer,</p>
+            
+            <div class="announcement">
+                <h2>We're Launching a New Feature!</h2>
+                <p>We're excited to announce our latest feature that will revolutionize how you use our product.</p>
+            </div>
+            
+            <p>Starting next week, you'll have access to our new analytics dashboard that provides deeper insights into your email performance.</p>
+            
+            <p>Here's what you can expect:</p>
+            <ul>
+                <li>Real-time open and click tracking</li>
+                <li>Subscriber engagement reports</li>
+                <li>Conversion tracking</li>
+                <li>Geographic data visualization</li>
+            </ul>
+            
+            <p>Click the button below to learn more about this exciting update.</p>
+            
+            <a href="#" class="button">Learn More</a>
+        </div>
+        
+        <div class="footer">
+            <p>&copy; 2023 Your Company. All rights reserved.</p>
+            <p><a href="#">Unsubscribe</a> | <a href="#">View in Browser</a></p>
+        </div>
+    </div>
+</body>
+</html>`,
+        blank: `<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    </style>
+</head>
+<body>
+    <p>Start creating your email template here...</p>
+</body>
+</html>`
+    };
+
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize GrapesJS
-        const editor = grapesjs.init({
-            container: '#gjs',
-            height: '100%',
-            storageManager: false,
-            plugins: ['gjs-preset-newsletter'],
-            pluginsOpts: {
-                'gjs-preset-newsletter': {
-                    modalTitleImport: 'Import your HTML template',
-                    modalLabelImport: 'Paste your HTML code here and click Import',
-                    modalBtnImport: 'Import',
-                    importPlaceholder: '<table><tr><td>Hello World!</td></tr></table>',
-                    cellStyle: {
-                        'font-size': '12px',
-                        'font-family': 'Arial, Helvetica, sans-serif',
-                        'color': '#333',
-                        'vertical-align': 'top'
-                    }
-                }
-            },
-            assetManager: {
-                uploadFile: function(e) {
-                    const files = e.dataTransfer ? e.dataTransfer.files : e.target.files;
-                    const formData = new FormData();
-                    
-                    for (let i = 0; i < files.length; i++) {
-                        formData.append('file-' + i, files[i]);
-                    }
-                    
-                    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-                    
-                    fetch('{% url "upload_template_asset" %}', {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'X-CSRFToken': csrfToken
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            editor.AssetManager.add(data.files);
-                        }
-                    })
-                    .catch(error => console.error('Error:', error));
-                }
+        // Initialize TinyMCE
+        tinymce.init({
+            selector: '#emailEditor',
+            height: 500,
+            plugins: [
+                'advlist autolink lists link image charmap print preview anchor',
+                'searchreplace visualblocks code fullscreen',
+                'insertdatetime media table paste code help wordcount'
+            ],
+            toolbar: 'undo redo | formatselect | ' +
+                'bold italic backcolor | alignleft aligncenter ' +
+                'alignright alignjustify | bullist numlist outdent indent | ' +
+                'removeformat | help',
+            setup: function(editor) {
+                editor.on('change', function() {
+                    updatePreview();
+                });
             }
         });
-        
-        // Load existing template if provided or use starter template
-        const starterTemplateEl = document.getElementById('starter-template');
-        const templateHtmlEl = document.getElementById('template-html-content');
-        
-        if (templateHtmlEl) {
-            // Load the existing template content
-            editor.setComponents(templateHtmlEl.innerHTML);
-        } else if (starterTemplateEl) {
-            // Use the starter template
-            editor.setComponents(starterTemplateEl.innerHTML);
+
+        // Tab switching
+        document.getElementById('editorTab').addEventListener('click', function() {
+            switchTab('editor');
+        });
+
+        document.getElementById('previewTab').addEventListener('click', function() {
+            switchTab('preview');
+            updatePreview();
+        });
+
+        document.getElementById('templateTab').addEventListener('click', function() {
+            switchTab('template');
+        });
+
+        // Template selection
+        const templateCards = document.querySelectorAll('.template-card');
+        templateCards.forEach(card => {
+            card.addEventListener('click', function() {
+                const templateType = this.getAttribute('data-template');
+                templateCards.forEach(c => c.classList.remove('selected'));
+                this.classList.add('selected');
+                
+                // Load template content into editor
+                tinymce.get('emailEditor').setContent(templateContent[templateType]);
+                
+                // Switch to editor tab
+                switchTab('editor');
+            });
+        });
+
+        // Subject field change
+        document.getElementById('emailSubjectField').addEventListener('input', function() {
+            document.getElementById('previewSubject').textContent = this.value;
+        });
+
+        // Save template
+        document.getElementById('saveTemplateBtn').addEventListener('click', function() {
+            saveTemplate();
+        });
+
+        // Close modal button
+        document.getElementById('closeModalBtn').addEventListener('click', function() {
+            document.getElementById('saveModal').classList.add('hidden');
+        });
+
+        // Function to switch tabs
+        function switchTab(tab) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tab + 'TabContent').classList.add('active');
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            document.getElementById(tab + 'Tab').classList.add('active');
         }
-        
-        // Save Template Button
-        document.getElementById('save-template').addEventListener('click', function() {
-            document.getElementById('html_content').value = editor.getHtml();
-            document.getElementById('save-modal').classList.remove('hidden');
-        });
-        
-        // Close Modal Button
-        document.getElementById('close-modal').addEventListener('click', function() {
-            document.getElementById('save-modal').classList.add('hidden');
-        });
-        
-        // Form Submit
-        document.getElementById('save-form').addEventListener('submit', function() {
-            // Set the HTML content again just before submission
-            document.getElementById('html_content').value = editor.getHtml();
-        });
+
+        // Function to update preview
+        function updatePreview() {
+            const content = tinymce.get('emailEditor').getContent();
+            const frame = document.getElementById('previewFrame');
+            const frameDoc = frame.contentDocument || frame.contentWindow.document;
+            
+            frameDoc.open();
+            frameDoc.write(content);
+            frameDoc.close();
+        }
+
+        // Function to save template
+        function saveTemplate() {
+            const templateId = document.getElementById('templateId').value;
+            const templateName = document.getElementById('templateNameField').value;
+            const emailSubject = document.getElementById('emailSubjectField').value;
+            const htmlContent = tinymce.get('emailEditor').getContent();
+            
+            if (!templateName) {
+                alert('Please enter a template name');
+                return;
+            }
+            
+            if (!emailSubject) {
+                alert('Please enter an email subject');
+                return;
+            }
+            
+            // Prepare data
+            const data = {
+                name: templateName,
+                subject: emailSubject,
+                html_content: htmlContent,
+                content: htmlContent,
+                template_id: templateId || null
+            };
+            
+            // Save template using API
+            fetch('{% url "save_template" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update template ID if it's a new template
+                    document.getElementById('templateId').value = data.template_id;
+                    
+                    // Show success modal
+                    document.getElementById('saveModal').classList.remove('hidden');
+                } else {
+                    alert('Error saving template: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while saving the template');
+            });
+        }
+
+        // Function to get CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
     });
 </script>
 {% endblock %} 

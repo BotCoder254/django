@@ -1,33 +1,162 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ template.name }} - Preview</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial, Helvetica, sans-serif;
-            background-color: #ffffff;
-        }
-        
-        /* Ensure images don't overflow their containers */
-        img {
-            max-width: 100%;
-            height: auto;
-        }
-        
-        /* Email container */
-        .email-container {
-            max-width: 100%;
-            margin: 0 auto;
-        }
-    </style>
-</head>
-<body>
-    <div class="email-container">
-        {{ template.html_content|safe }}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Template Preview - {{ template.name }} - EmailPro{% endblock %}
+
+{% block extra_css %}
+<style>
+    .preview-card {
+        max-width: 800px;
+        margin: 0 auto;
+        background-color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    .preview-header {
+        border-bottom: 1px solid #e5e7eb;
+        padding: 1.25rem;
+    }
+    .preview-content {
+        padding: 1.25rem;
+    }
+    .preview-iframe {
+        width: 100%;
+        min-height: 600px;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.375rem;
+    }
+    .preview-actions {
+        margin-top: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+    }
+    .device-toggle {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .device-button {
+        padding: 0.5rem 1rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .device-button.active {
+        background-color: #4f46e5;
+        color: white;
+        border-color: #4f46e5;
+    }
+    .preview-metadata {
+        background-color: #f9fafb;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    .preview-metadata dt {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+    }
+    .preview-metadata dd {
+        font-size: 0.875rem;
+        margin-bottom: 0.5rem;
+        color: #1f2937;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-6">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Template Preview: {{ template.name }}</h1>
+        <div class="flex gap-3">
+            <a href="{% url 'email_templates' %}" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                Back to Templates
+            </a>
+            <a href="{% url 'email_editor_template' template_id=template.id %}" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                Edit Template
+            </a>
+        </div>
     </div>
-</body>
-</html> 
+
+    <div class="preview-card">
+        <div class="preview-header">
+            <div class="preview-metadata">
+                <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
+                    <div>
+                        <dt>Subject</dt>
+                        <dd>{{ template.subject }}</dd>
+                    </div>
+                    <div>
+                        <dt>Created</dt>
+                        <dd>{{ template.created_at|date:"M d, Y" }}</dd>
+                    </div>
+                    <div>
+                        <dt>Last Updated</dt>
+                        <dd>{{ template.updated_at|date:"M d, Y" }}</dd>
+                    </div>
+                </dl>
+            </div>
+            <div class="device-toggle">
+                <button id="desktop-view" class="device-button active">
+                    <i class="fas fa-desktop mr-1"></i> Desktop
+                </button>
+                <button id="tablet-view" class="device-button">
+                    <i class="fas fa-tablet-alt mr-1"></i> Tablet
+                </button>
+                <button id="mobile-view" class="device-button">
+                    <i class="fas fa-mobile-alt mr-1"></i> Mobile
+                </button>
+            </div>
+        </div>
+        <div class="preview-content">
+            <iframe id="preview-iframe" class="preview-iframe"></iframe>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const iframe = document.getElementById('preview-iframe');
+        const desktopBtn = document.getElementById('desktop-view');
+        const tabletBtn = document.getElementById('tablet-view');
+        const mobileBtn = document.getElementById('mobile-view');
+        
+        // Load the template content into the iframe
+        const frameDoc = iframe.contentDocument || iframe.contentWindow.document;
+        frameDoc.open();
+        frameDoc.write(`{{ template.html_content|escapejs }}`);
+        frameDoc.close();
+        
+        // Device view toggling
+        desktopBtn.addEventListener('click', function() {
+            setActiveDevice(this);
+            iframe.style.width = '100%';
+        });
+        
+        tabletBtn.addEventListener('click', function() {
+            setActiveDevice(this);
+            iframe.style.width = '768px';
+            iframe.style.margin = '0 auto';
+        });
+        
+        mobileBtn.addEventListener('click', function() {
+            setActiveDevice(this);
+            iframe.style.width = '375px';
+            iframe.style.margin = '0 auto';
+        });
+        
+        function setActiveDevice(button) {
+            desktopBtn.classList.remove('active');
+            tabletBtn.classList.remove('active');
+            mobileBtn.classList.remove('active');
+            button.classList.add('active');
+        }
+    });
+</script>
+{% endblock %} 

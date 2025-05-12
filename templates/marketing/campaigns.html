@@ -2,173 +2,239 @@
 {% load static %}
 {% load user_tags %}
 
-{% block title %}Campaigns - EmailPro{% endblock %}
+{% block title %}Email Campaigns - EmailPro{% endblock %}
+
+{% block extra_css %}
+<style>
+    .campaign-card {
+        transition: all 0.2s ease;
+    }
+    .campaign-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    .status-badge.draft {
+        background-color: #e5e7eb;
+        color: #4b5563;
+    }
+    .status-badge.scheduled {
+        background-color: #dbeafe;
+        color: #1e40af;
+    }
+    .status-badge.sending {
+        background-color: #fef3c7;
+        color: #92400e;
+    }
+    .status-badge.sent {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+    .campaign-actions {
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    .campaign-card:hover .campaign-actions {
+        opacity: 1;
+    }
+    .empty-state-icon {
+        font-size: 3rem;
+        color: #d1d5db;
+    }
+    .status-filter {
+        white-space: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+        padding: 0.5rem 0;
+    }
+    .status-button {
+        padding: 0.5rem 1rem;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+    }
+    .status-button.active {
+        background-color: #4f46e5;
+        color: white;
+    }
+    .progress-bar {
+        height: 8px;
+        border-radius: 4px;
+        background-color: #e5e7eb;
+        overflow: hidden;
+    }
+    .progress-value {
+        height: 100%;
+        background-color: #4f46e5;
+    }
+    .progress-0 { width: 0%; }
+    .progress-10 { width: 10%; }
+    .progress-20 { width: 20%; }
+    .progress-30 { width: 30%; }
+    .progress-40 { width: 40%; }
+    .progress-50 { width: 50%; }
+    .progress-60 { width: 60%; }
+    .progress-70 { width: 70%; }
+    .progress-80 { width: 80%; }
+    .progress-90 { width: 90%; }
+    .progress-100 { width: 100%; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Header -->
-    <div class="md:flex md:items-center md:justify-between mb-6">
-        <div class="flex-1 min-w-0">
-            <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
-                Email Campaigns
-            </h2>
-            <p class="mt-1 text-sm text-gray-500">
-                Manage your email marketing campaigns
-            </p>
-        </div>
-        <div class="mt-4 flex md:mt-0 md:ml-4">
-            <a href="{% url 'add_campaign' %}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                <i class="fas fa-plus mr-2"></i> Create Campaign
+<div class="container max-w-7xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Email Campaigns</h1>
+        <div class="flex gap-3">
+            <a href="{% url 'create_campaign' %}" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                <i class="fas fa-plus mr-1"></i> Create Campaign
             </a>
         </div>
     </div>
 
-    <!-- Filters and Search -->
-    <div class="bg-white shadow-sm rounded-lg p-4 mb-6">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between">
-            <div class="flex-1 flex flex-col md:flex-row gap-4">
-                <div class="w-full md:w-auto">
-                    <select id="status-filter" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                        <option value="">All Statuses</option>
-                        <option value="draft">Draft</option>
-                        <option value="scheduled">Scheduled</option>
-                        <option value="sending">Sending</option>
-                        <option value="sent">Sent</option>
-                        <option value="cancelled">Cancelled</option>
-                    </select>
-                </div>
-                <div class="w-full md:w-auto">
-                    <input type="text" id="search" placeholder="Search campaigns..." class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                </div>
-            </div>
-            <div class="mt-4 md:mt-0">
-                <button id="apply-filters" class="px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    Apply Filters
-                </button>
+    <!-- Status filters -->
+    <div class="mb-6 status-filter">
+        <div class="inline-flex space-x-2">
+            <button class="status-button active" data-status="all">All Campaigns</button>
+            <button class="status-button" data-status="draft">Drafts</button>
+            <button class="status-button" data-status="scheduled">Scheduled</button>
+            <button class="status-button" data-status="sending">Sending</button>
+            <button class="status-button" data-status="sent">Sent</button>
+        </div>
+    </div>
+
+    <!-- Search bar -->
+    <div class="mb-6">
+        <div class="relative">
+            <input type="text" id="campaign-search" placeholder="Search campaigns..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-search text-gray-400"></i>
             </div>
         </div>
     </div>
 
-    <!-- Campaigns List -->
-    <div class="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul role="list" class="divide-y divide-gray-200">
-            {% for campaign in campaigns %}
-            <li>
-                <a href="{% url 'campaign_detail' pk=campaign.pk %}" class="block hover:bg-gray-50">
-                    <div class="px-4 py-4 sm:px-6">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center">
-                                <div class="flex-shrink-0">
-                                    <div class="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center">
-                                        <i class="fas fa-envelope text-indigo-600 text-xl"></i>
-                                    </div>
-                                </div>
-                                <div class="ml-4">
-                                    <p class="text-sm font-medium text-indigo-600 truncate">
-                                        {{ campaign.name }}
-                                    </p>
-                                    <p class="mt-1 text-sm text-gray-500 truncate">
-                                        Subject: {{ campaign.subject }}
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="ml-2 flex-shrink-0 flex items-center">
-                                {% if campaign.status == 'draft' %}
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                    Draft
-                                </span>
-                                {% elif campaign.status == 'scheduled' %}
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                    Scheduled
-                                </span>
-                                {% elif campaign.status == 'sending' %}
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                    Sending
-                                </span>
-                                {% elif campaign.status == 'sent' %}
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                    Sent
-                                </span>
-                                {% elif campaign.status == 'cancelled' %}
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                                    Cancelled
-                                </span>
+    {% if campaigns %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 campaign-grid">
+        {% for campaign in campaigns %}
+        <div class="campaign-card bg-white rounded-lg shadow-sm overflow-hidden" data-name="{{ campaign.name|lower }}" data-status="{{ campaign.status|lower }}">
+            <div class="p-4">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h3 class="font-medium text-gray-900 truncate">{{ campaign.name }}</h3>
+                        <p class="text-sm text-gray-500 mt-1">
+                            <span class="status-badge {% if campaign.status == 'DRAFT' %}draft{% elif campaign.status == 'SCHEDULED' %}scheduled{% elif campaign.status == 'SENDING' %}sending{% elif campaign.status == 'SENT' %}sent{% endif %}">
+                                {{ campaign.status|title }}
+                            </span>
+                        </p>
+                    </div>
+                    <div class="campaign-actions relative">
+                        <button class="text-gray-400 hover:text-gray-500 focus:outline-none campaign-menu-button" data-id="{{ campaign.id }}">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <div class="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 hidden campaign-dropdown" data-id="{{ campaign.id }}">
+                            <div class="py-1" role="menu" aria-orientation="vertical">
+                                <a href="{% url 'campaign_detail' pk=campaign.id %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
+                                    <i class="fas fa-eye mr-2"></i> View Details
+                                </a>
+                                {% if campaign.status == 'DRAFT' %}
+                                <a href="{% url 'edit_campaign' pk=campaign.id %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
+                                    <i class="fas fa-edit mr-2"></i> Edit
+                                </a>
+                                <a href="{% url 'schedule_campaign' pk=campaign.id %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
+                                    <i class="fas fa-clock mr-2"></i> Schedule
+                                </a>
+                                {% endif %}
+                                {% if campaign.status == 'SCHEDULED' %}
+                                <a href="{% url 'cancel_campaign' pk=campaign.id %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
+                                    <i class="fas fa-ban mr-2"></i> Cancel Schedule
+                                </a>
+                                {% endif %}
+                                {% if campaign.status == 'DRAFT' %}
+                                <a href="{% url 'delete_campaign' pk=campaign.id %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100" role="menuitem">
+                                    <i class="fas fa-trash-alt mr-2"></i> Delete
+                                </a>
+                                {% endif %}
+                                {% if campaign.status == 'SENT' %}
+                                <a href="{% url 'campaign_report' pk=campaign.id %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
+                                    <i class="fas fa-chart-bar mr-2"></i> View Report
+                                </a>
                                 {% endif %}
                             </div>
                         </div>
-                        <div class="mt-2 sm:flex sm:justify-between">
-                            <div class="sm:flex">
-                                <p class="flex items-center text-sm text-gray-500">
-                                    <i class="fas fa-users flex-shrink-0 mr-1.5 text-gray-400"></i>
-                                    Lists: {{ campaign.lists.count }}
-                                </p>
-                            </div>
-                            <div class="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                                <i class="fas fa-calendar flex-shrink-0 mr-1.5 text-gray-400"></i>
-                                <p>
-                                    {% if campaign.status == 'scheduled' %}
-                                        Scheduled for {{ campaign.schedule_time|date:"M d, Y H:i" }}
-                                    {% elif campaign.status == 'sent' %}
-                                        Sent {{ campaign.sent_time|date:"M d, Y" }}
-                                    {% else %}
-                                        Created {{ campaign.created_at|date:"M d, Y" }}
-                                    {% endif %}
-                                </p>
-                            </div>
-                        </div>
                     </div>
-                </a>
-            </li>
-            {% empty %}
-            <li class="px-4 py-8 text-center">
-                <div class="flex flex-col items-center">
-                    <div class="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-                        <i class="fas fa-envelope text-gray-400 text-2xl"></i>
-                    </div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-1">No campaigns yet</h3>
-                    <p class="text-gray-500 mb-4">Create your first email campaign to start engaging with your audience.</p>
-                    <a href="{% url 'add_campaign' %}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        <i class="fas fa-plus mr-2"></i> Create First Campaign
-                    </a>
                 </div>
-            </li>
-            {% endfor %}
-        </ul>
+                
+                <div class="mt-4">
+                    <div class="flex justify-between text-sm text-gray-500 mb-1">
+                        <span>Recipients:</span>
+                        <span>{{ campaign.recipient_count }} subscribers</span>
+                    </div>
+                    {% if campaign.status == 'SENDING' or campaign.status == 'SENT' %}
+                    <div class="flex justify-between text-sm text-gray-500 mb-1">
+                        <span>Progress:</span>
+                        <span>{{ campaign.sent_count|default:0 }}/{{ campaign.recipient_count }}</span>
+                    </div>
+                    <div class="progress-bar mt-1">
+                        <div class="progress-value" style="width: 50%"></div>
+                    </div>
+                    {% endif %}
+                    {% if campaign.status == 'SCHEDULED' %}
+                    <div class="flex justify-between text-sm text-gray-500 mb-1">
+                        <span>Scheduled for:</span>
+                        <span>{{ campaign.schedule_time|date:"M d, Y H:i" }}</span>
+                    </div>
+                    {% endif %}
+                    {% if campaign.status == 'SENT' %}
+                    <div class="flex justify-between text-sm text-gray-500 mb-1">
+                        <span>Sent on:</span>
+                        <span>{{ campaign.sent_time|date:"M d, Y H:i" }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm text-gray-500 mb-1">
+                        <span>Open rate:</span>
+                        <span>{{ campaign.open_rate|floatformat:1 }}%</span>
+                    </div>
+                    <div class="flex justify-between text-sm text-gray-500 mb-1">
+                        <span>Click rate:</span>
+                        <span>{{ campaign.click_rate|floatformat:1 }}%</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="bg-gray-50 px-4 py-3 flex justify-between items-center">
+                <span class="text-xs text-gray-500">Template: {{ campaign.email_template.name|truncatechars:25 }}</span>
+                <div class="flex gap-2">
+                    <a href="{% url 'campaign_detail' pk=campaign.id %}" class="text-indigo-600 hover:text-indigo-800">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                    {% if campaign.status == 'DRAFT' %}
+                    <a href="{% url 'edit_campaign' pk=campaign.id %}" class="text-indigo-600 hover:text-indigo-800">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
     </div>
-
-    <!-- Pagination -->
-    {% if campaigns.has_other_pages %}
-    <nav class="border-t border-gray-200 px-4 flex items-center justify-between sm:px-0 mt-6">
-        <div class="w-0 flex-1 flex">
-            {% if campaigns.has_previous %}
-            <a href="?page={{ campaigns.previous_page_number }}" class="border-t-2 border-transparent pt-4 pr-1 inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">
-                <i class="fas fa-arrow-left mr-3 text-gray-400"></i>
-                Previous
-            </a>
-            {% endif %}
+    {% else %}
+    <div class="text-center py-12 bg-white rounded-lg shadow-sm">
+        <div class="empty-state-icon mb-4">
+            <i class="fas fa-paper-plane"></i>
         </div>
-        <div class="hidden md:flex">
-            {% for i in campaigns.paginator.page_range %}
-                {% if campaigns.number == i %}
-                <a href="#" class="border-indigo-500 text-indigo-600 border-t-2 pt-4 px-4 inline-flex items-center text-sm font-medium" aria-current="page">
-                    {{ i }}
-                </a>
-                {% else %}
-                <a href="?page={{ i }}" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 border-t-2 pt-4 px-4 inline-flex items-center text-sm font-medium">
-                    {{ i }}
-                </a>
-                {% endif %}
-            {% endfor %}
-        </div>
-        <div class="w-0 flex-1 flex justify-end">
-            {% if campaigns.has_next %}
-            <a href="?page={{ campaigns.next_page_number }}" class="border-t-2 border-transparent pt-4 pl-1 inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">
-                Next
-                <i class="fas fa-arrow-right ml-3 text-gray-400"></i>
-            </a>
-            {% endif %}
-        </div>
-    </nav>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No Campaigns Yet</h3>
+        <p class="text-gray-500 mb-6">Get started by creating your first email campaign</p>
+        <a href="{% url 'create_campaign' %}" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+            Create Your First Campaign
+        </a>
+    </div>
     {% endif %}
 </div>
 {% endblock %}
@@ -176,40 +242,75 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const statusFilter = document.getElementById('status-filter');
-        const searchInput = document.getElementById('search');
-        const applyButton = document.getElementById('apply-filters');
+        // Campaign dropdown menus
+        const menuButtons = document.querySelectorAll('.campaign-menu-button');
+        const dropdowns = document.querySelectorAll('.campaign-dropdown');
         
-        // Apply filters when button is clicked
-        applyButton.addEventListener('click', function() {
-            let url = new URL(window.location.href);
-            
-            // Add status filter
-            if (statusFilter.value) {
-                url.searchParams.set('status', statusFilter.value);
-            } else {
-                url.searchParams.delete('status');
-            }
-            
-            // Add search query
-            if (searchInput.value.trim()) {
-                url.searchParams.set('search', searchInput.value.trim());
-            } else {
-                url.searchParams.delete('search');
-            }
-            
-            // Navigate to filtered URL
-            window.location.href = url.toString();
+        menuButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const campaignId = this.getAttribute('data-id');
+                const dropdown = document.querySelector(`.campaign-dropdown[data-id="${campaignId}"]`);
+                
+                if (dropdown) {
+                    dropdown.classList.toggle('hidden');
+                    
+                    // Close other dropdowns
+                    dropdowns.forEach(otherDropdown => {
+                        if (otherDropdown !== dropdown) {
+                            otherDropdown.classList.add('hidden');
+                        }
+                    });
+                }
+            });
         });
         
-        // Set initial values from URL params
-        const params = new URLSearchParams(window.location.search);
-        if (params.has('status')) {
-            statusFilter.value = params.get('status');
-        }
-        if (params.has('search')) {
-            searchInput.value = params.get('search');
-        }
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function() {
+            dropdowns.forEach(dropdown => {
+                dropdown.classList.add('hidden');
+            });
+        });
+        
+        // Status filtering
+        const statusButtons = document.querySelectorAll('.status-button');
+        const campaignCards = document.querySelectorAll('.campaign-card');
+        
+        statusButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Update active state
+                statusButtons.forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Apply filtering logic
+                const status = this.getAttribute('data-status');
+                
+                campaignCards.forEach(card => {
+                    if (status === 'all' || card.getAttribute('data-status') === status) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+        
+        // Search functionality
+        const searchInput = document.getElementById('campaign-search');
+        
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            
+            campaignCards.forEach(card => {
+                const campaignName = card.getAttribute('data-name');
+                
+                if (campaignName.includes(searchTerm)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
     });
 </script>
 {% endblock %} 

@@ -1,0 +1,395 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Subscribers - EmailPro{% endblock %}
+
+{% block extra_css %}
+<style>
+    .subscriber-table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .subscriber-table th {
+        background-color: #f9fafb;
+        font-weight: 500;
+        text-align: left;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .subscriber-table td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .subscriber-table tr:hover {
+        background-color: #f9fafb;
+    }
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    .status-badge.active {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+    .status-badge.inactive {
+        background-color: #e5e7eb;
+        color: #4b5563;
+    }
+    .action-button {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        transition: all 0.2s;
+    }
+    .action-button:hover {
+        background-color: #f3f4f6;
+    }
+    .action-button.text-red-600:hover {
+        background-color: #fee2e2;
+    }
+    .table-checkbox {
+        width: 1.25rem;
+        height: 1.25rem;
+        border-radius: 0.25rem;
+        border: 1px solid #d1d5db;
+        appearance: none;
+        background-color: white;
+        cursor: pointer;
+    }
+    .table-checkbox:checked {
+        background-color: #4f46e5;
+        border-color: #4f46e5;
+        background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
+        background-size: 100% 100%;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+    .filter-section {
+        border-radius: 0.5rem;
+        background-color: white;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    }
+    .empty-state-icon {
+        font-size: 3rem;
+        color: #d1d5db;
+    }
+    .pagination-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+    }
+    .pagination-button:hover {
+        background-color: #f3f4f6;
+    }
+    .pagination-button.active {
+        background-color: #4f46e5;
+        color: white;
+    }
+    .pagination-button.disabled {
+        color: #9ca3af;
+        cursor: not-allowed;
+    }
+    .pagination-button.disabled:hover {
+        background-color: transparent;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container max-w-7xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">Subscribers</h1>
+            <p class="text-sm text-gray-500 mt-1">Manage your email subscribers</p>
+        </div>
+        <div class="flex gap-3">
+            <a href="{% url 'import_subscribers' %}" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                <i class="fas fa-file-import mr-1"></i> Import
+            </a>
+            <a href="{% url 'add_subscriber' %}" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                <i class="fas fa-plus mr-1"></i> Add Subscriber
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters and Search -->
+    <div class="mb-6 filter-section p-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="md:col-span-2">
+                <label for="search-subscribers" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                <div class="relative">
+                    <input type="text" id="search-subscribers" name="search" placeholder="Search by email, name..." class="block w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" value="{{ request.GET.search|default:'' }}">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-search text-gray-400"></i>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <label for="list-filter" class="block text-sm font-medium text-gray-700 mb-1">List</label>
+                <select id="list-filter" name="list" class="block w-full py-2 pl-3 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="">All Lists</option>
+                    {% for list in subscriber_lists %}
+                    <option value="{{ list.id }}" {% if request.GET.list == list.id|stringformat:"s" %}selected{% endif %}>{{ list.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="status-filter" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select id="status-filter" name="status" class="block w-full py-2 pl-3 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="">All Statuses</option>
+                    <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+        </div>
+        <div class="flex justify-end mt-4">
+            <button id="apply-filters" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">Apply Filters</button>
+        </div>
+    </div>
+
+    <!-- Bulk Actions -->
+    <div class="flex justify-between items-center mb-4">
+        <div class="bulk-actions opacity-0 pointer-events-none transition-opacity" id="bulk-actions">
+            <div class="flex items-center space-x-4">
+                <span class="text-sm text-gray-700" id="selected-count">0 selected</span>
+                <div class="flex space-x-2">
+                    <button class="text-sm text-indigo-600 hover:text-indigo-800">
+                        <i class="fas fa-tag mr-1"></i> Add to List
+                    </button>
+                    <button class="text-sm text-red-600 hover:text-red-800">
+                        <i class="fas fa-trash-alt mr-1"></i> Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="text-sm text-gray-500">
+            {{ subscribers.count }} subscribers
+        </div>
+    </div>
+
+    <!-- Subscribers Table -->
+    {% if subscribers %}
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
+        <table class="min-w-full subscriber-table">
+            <thead>
+                <tr>
+                    <th class="w-12">
+                        <input type="checkbox" class="table-checkbox" id="select-all">
+                    </th>
+                    <th>Email</th>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Lists</th>
+                    <th>Joined</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for subscriber in subscribers %}
+                <tr>
+                    <td>
+                        <input type="checkbox" class="table-checkbox subscriber-checkbox" data-id="{{ subscriber.id }}">
+                    </td>
+                    <td>{{ subscriber.email }}</td>
+                    <td>{% if subscriber.first_name or subscriber.last_name %}{{ subscriber.first_name }} {{ subscriber.last_name }}{% else %}-{% endif %}</td>
+                    <td>
+                        <span class="status-badge {% if subscriber.active %}active{% else %}inactive{% endif %}">
+                            {% if subscriber.active %}Active{% else %}Inactive{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="flex flex-wrap gap-1">
+                            {% for list in subscriber.lists.all|slice:":2" %}
+                            <span class="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs rounded-full">{{ list.name }}</span>
+                            {% endfor %}
+                            {% if subscriber.lists.count > 2 %}
+                            <span class="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">+{{ subscriber.lists.count|add:"-2" }}</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>{{ subscriber.created_at|date:"M d, Y" }}</td>
+                    <td class="text-right">
+                        <div class="flex justify-end space-x-2">
+                            <a href="{% url 'edit_subscriber' pk=subscriber.id %}" class="action-button text-indigo-600" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{% url 'subscriber_activity' pk=subscriber.id %}" class="action-button text-indigo-600" title="Activity">
+                                <i class="fas fa-history"></i>
+                            </a>
+                            <a href="{% url 'delete_subscriber' pk=subscriber.id %}" class="action-button text-red-600" title="Delete">
+                                <i class="fas fa-trash-alt"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if subscribers.has_other_pages %}
+    <nav class="flex justify-center">
+        <ul class="flex space-x-1">
+            {% if subscribers.has_previous %}
+            <li>
+                <a href="?page={{ subscribers.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.list %}&list={{ request.GET.list }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="pagination-button">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            </li>
+            {% else %}
+            <li>
+                <span class="pagination-button disabled">
+                    <i class="fas fa-chevron-left"></i>
+                </span>
+            </li>
+            {% endif %}
+            
+            {% for i in subscribers.paginator.page_range %}
+                {% if subscribers.number == i %}
+                <li>
+                    <span class="pagination-button active">{{ i }}</span>
+                </li>
+                {% else %}
+                <li>
+                    <a href="?page={{ i }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.list %}&list={{ request.GET.list }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="pagination-button">{{ i }}</a>
+                </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if subscribers.has_next %}
+            <li>
+                <a href="?page={{ subscribers.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.list %}&list={{ request.GET.list }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="pagination-button">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+            {% else %}
+            <li>
+                <span class="pagination-button disabled">
+                    <i class="fas fa-chevron-right"></i>
+                </span>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="text-center py-12 bg-white rounded-lg shadow-sm">
+        <div class="empty-state-icon mb-4">
+            <i class="fas fa-users"></i>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No Subscribers Yet</h3>
+        <p class="text-gray-500 mb-6">Get started by adding your first subscriber or importing a list</p>
+        <div class="flex justify-center space-x-4">
+            <a href="{% url 'add_subscriber' %}" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                Add Subscriber
+            </a>
+            <a href="{% url 'import_subscribers' %}" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                Import Subscribers
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Apply filters
+        const searchInput = document.getElementById('search-subscribers');
+        const listFilter = document.getElementById('list-filter');
+        const statusFilter = document.getElementById('status-filter');
+        const applyButton = document.getElementById('apply-filters');
+
+        applyButton.addEventListener('click', function() {
+            let url = new URL(window.location.href);
+            
+            // Add search query
+            if (searchInput.value.trim()) {
+                url.searchParams.set('search', searchInput.value.trim());
+            } else {
+                url.searchParams.delete('search');
+            }
+            
+            // Add list filter
+            if (listFilter.value) {
+                url.searchParams.set('list', listFilter.value);
+            } else {
+                url.searchParams.delete('list');
+            }
+            
+            // Add status filter
+            if (statusFilter.value) {
+                url.searchParams.set('status', statusFilter.value);
+            } else {
+                url.searchParams.delete('status');
+            }
+            
+            // Reset page to 1
+            url.searchParams.delete('page');
+            
+            // Navigate to filtered URL
+            window.location.href = url.toString();
+        });
+
+        // Handle enter key in search field
+        searchInput.addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') {
+                applyButton.click();
+            }
+        });
+        
+        // Bulk selection
+        const selectAllCheckbox = document.getElementById('select-all');
+        const subscriberCheckboxes = document.querySelectorAll('.subscriber-checkbox');
+        const bulkActions = document.getElementById('bulk-actions');
+        const selectedCount = document.getElementById('selected-count');
+        
+        selectAllCheckbox.addEventListener('change', function() {
+            const isChecked = this.checked;
+            
+            subscriberCheckboxes.forEach(checkbox => {
+                checkbox.checked = isChecked;
+            });
+            
+            updateBulkActionsVisibility();
+        });
+        
+        subscriberCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                updateBulkActionsVisibility();
+                
+                // Update select all checkbox state
+                if (!this.checked) {
+                    selectAllCheckbox.checked = false;
+                } else {
+                    const allChecked = Array.from(subscriberCheckboxes).every(checkbox => checkbox.checked);
+                    selectAllCheckbox.checked = allChecked;
+                }
+            });
+        });
+        
+        function updateBulkActionsVisibility() {
+            const checkedCount = document.querySelectorAll('.subscriber-checkbox:checked').length;
+            
+            if (checkedCount > 0) {
+                bulkActions.classList.remove('opacity-0', 'pointer-events-none');
+                selectedCount.textContent = `${checkedCount} selected`;
+            } else {
+                bulkActions.classList.add('opacity-0', 'pointer-events-none');
+            }
+        }
+    });
+</script>
+{% endblock %} 

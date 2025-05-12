@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.utils.text import slugify
 import json
+from django.utils import timezone
 
 class Subscriber(models.Model):
     """
@@ -39,6 +40,12 @@ class Subscriber(models.Model):
         if not self.custom_fields:
             return None
         return self.custom_fields.get(field_name)
+        
+    def save(self, *args, **kwargs):
+        """Ensure dates are timezone aware"""
+        if self.created_at and timezone.is_naive(self.created_at):
+            self.created_at = timezone.make_aware(self.created_at)
+        super().save(*args, **kwargs)
 
 class SubscriberList(models.Model):
     """
@@ -60,6 +67,12 @@ class SubscriberList(models.Model):
     @property
     def subscriber_count(self):
         return self.subscribers.count()
+        
+    def save(self, *args, **kwargs):
+        """Ensure dates are timezone aware"""
+        if self.created_at and timezone.is_naive(self.created_at):
+            self.created_at = timezone.make_aware(self.created_at)
+        super().save(*args, **kwargs)
 
 class EmailTemplate(models.Model):
     """
@@ -78,6 +91,12 @@ class EmailTemplate(models.Model):
     
     def __str__(self):
         return self.name
+        
+    def save(self, *args, **kwargs):
+        """Ensure dates are timezone aware"""
+        if self.created_at and timezone.is_naive(self.created_at):
+            self.created_at = timezone.make_aware(self.created_at)
+        super().save(*args, **kwargs)
 
 class Campaign(models.Model):
     """
@@ -121,6 +140,17 @@ class Campaign(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(self.name)
+        
+        # Ensure dates are timezone aware
+        if self.created_at and timezone.is_naive(self.created_at):
+            self.created_at = timezone.make_aware(self.created_at)
+        
+        if self.schedule_time and timezone.is_naive(self.schedule_time):
+            self.schedule_time = timezone.make_aware(self.schedule_time)
+            
+        if self.sent_time and timezone.is_naive(self.sent_time):
+            self.sent_time = timezone.make_aware(self.sent_time)
+            
         super().save(*args, **kwargs)
 
 class CampaignAnalytics(models.Model):
@@ -480,6 +510,19 @@ class ABTestCampaign(models.Model):
     
     def __str__(self):
         return self.name
+    
+    def save(self, *args, **kwargs):
+        """Ensure dates are timezone aware"""
+        if self.created_at and timezone.is_naive(self.created_at):
+            self.created_at = timezone.make_aware(self.created_at)
+            
+        if self.start_time and timezone.is_naive(self.start_time):
+            self.start_time = timezone.make_aware(self.start_time)
+            
+        if self.winner_selected_time and timezone.is_naive(self.winner_selected_time):
+            self.winner_selected_time = timezone.make_aware(self.winner_selected_time)
+            
+        super().save(*args, **kwargs)
 
 class ABTestVariant(models.Model):
     """
@@ -527,3 +570,13 @@ class ABTestVariant(models.Model):
         if self.delivered_count == 0:
             return 0
         return (self.click_count / self.delivered_count) * 100
+    
+    def save(self, *args, **kwargs):
+        """Ensure dates are timezone aware"""
+        if self.created_at and timezone.is_naive(self.created_at):
+            self.created_at = timezone.make_aware(self.created_at)
+            
+        if self.send_time and timezone.is_naive(self.send_time):
+            self.send_time = timezone.make_aware(self.send_time)
+            
+        super().save(*args, **kwargs)
