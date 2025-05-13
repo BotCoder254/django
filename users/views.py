@@ -15,6 +15,7 @@ import stripe
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
+from django.core.paginator import Paginator
 
 # Stripe configuration
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -119,8 +120,11 @@ def profile(request):
     """
     User profile view
     """
-    # Get user activities for display
-    activities = request.user.activities.all()[:10]
+    # Get user activities with pagination (3 items per page)
+    activities_list = request.user.activities.all().order_by('-timestamp')
+    paginator = Paginator(activities_list, 3)
+    page_number = request.GET.get('page')
+    activities = paginator.get_page(page_number)
     
     return render(request, 'users/profile.html', {
         'user': request.user,

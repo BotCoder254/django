@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Your Profile - EmailPro{% endblock %}
+
+{% block content %}
+<div class="container max-w-6xl mx-auto px-4 py-8">
+    <div class="flex flex-col md:flex-row">
+        <!-- Sidebar -->
+        <div class="w-full md:w-1/3 p-4">
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div class="flex flex-col items-center">
+                    {% if user.profile_picture %}
+                        <img src="{{ user.profile_picture.url }}" alt="{{ user.first_name }}" class="w-32 h-32 rounded-full mb-4 object-cover">
+                    {% else %}
+                        <div class="w-32 h-32 rounded-full bg-indigo-100 flex items-center justify-center mb-4">
+                            <i class="fas fa-user text-indigo-500 text-4xl"></i>
+                        </div>
+                    {% endif %}
+                    <h2 class="text-xl font-semibold text-gray-800 mb-1">{{ user.first_name }} {{ user.last_name }}</h2>
+                    <p class="text-gray-600 mb-4">{{ user.email }}</p>
+                    
+                    <a href="{% url 'edit_profile' %}" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors text-center mb-2">
+                        <i class="fas fa-user-edit mr-2"></i> Edit Profile
+                    </a>
+                    <a href="{% url 'change_password' %}" class="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors text-center">
+                        <i class="fas fa-lock mr-2"></i> Change Password
+                    </a>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Account Info</h3>
+                <div class="space-y-3">
+                    <div>
+                        <span class="text-gray-500 text-sm">Company</span>
+                        <p class="text-gray-900">{{ user.company_name|default:"Not specified" }}</p>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 text-sm">Subscription Plan</span>
+                        <p class="text-gray-900 capitalize">{{ user.subscription_plan }}</p>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 text-sm">Member Since</span>
+                        <p class="text-gray-900">{{ user.date_joined|date:"F d, Y" }}</p>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 text-sm">Email Verification</span>
+                        {% if user.is_verified %}
+                            <p class="text-green-600">Verified <i class="fas fa-check-circle"></i></p>
+                        {% else %}
+                            <div class="flex items-center text-red-600">
+                                <p class="mr-2">Not Verified</p>
+                                <a href="{% url 'resend_verification' %}" class="text-indigo-600 hover:text-indigo-800 text-sm">
+                                    Resend Verification Email
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="w-full md:w-2/3 p-4">
+            <!-- Usage Overview -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Email Usage</h3>
+                
+                <div class="mb-4">
+                    <div class="flex justify-between mb-1">
+                        <span class="text-gray-700">{{ user.usage_count }} / {{ user.usage_quota }} emails</span>
+                        <span class="text-gray-700">{{ user.get_usage_percentage }}%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div class="bg-indigo-600 h-2.5 rounded-full" {% if user.get_usage_percentage %}style="width: {{ user.get_usage_percentage }}%"{% else %}style="width: 0%"{% endif %}></div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-between items-center">
+                    <span class="text-sm text-gray-500">
+                        {% if user.subscription_plan == 'free' %}
+                            Free plan includes {{ user.usage_quota }} emails per month
+                        {% else %}
+                            {{ user.subscription_plan|title }} plan includes {{ user.usage_quota }} emails per month
+                        {% endif %}
+                    </span>
+                    
+                    {% if user.subscription_plan == 'free' %}
+                        <a href="{% url 'upgrade_subscription' %}" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors">
+                            Upgrade Plan
+                        </a>
+                    {% else %}
+                        <a href="{% url 'subscription' %}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors">
+                            Manage Subscription
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Recent Activity -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">Recent Activity</h3>
+                </div>
+                
+                {% if activities %}
+                    <div class="space-y-4">
+                        {% for activity in activities %}
+                            <div class="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
+                                <div class="flex items-start">
+                                    <div class="bg-gray-100 rounded-full p-2 mr-4">
+                                        {% if 'login' in activity.action %}
+                                            <i class="fas fa-sign-in-alt text-blue-500"></i>
+                                        {% elif 'campaign' in activity.action %}
+                                            <i class="fas fa-envelope text-green-500"></i>
+                                        {% elif 'template' in activity.action %}
+                                            <i class="fas fa-file-alt text-purple-500"></i>
+                                        {% elif 'subscriber' in activity.action %}
+                                            <i class="fas fa-user-plus text-orange-500"></i>
+                                        {% elif 'subscription' in activity.action %}
+                                            <i class="fas fa-credit-card text-indigo-500"></i>
+                                        {% else %}
+                                            <i class="fas fa-bell text-gray-500"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="text-gray-800">
+                                            {% if activity.action == 'login' %}
+                                                Logged in
+                                            {% elif activity.action == 'register' %}
+                                                Account created
+                                            {% elif activity.action == 'campaign_created' %}
+                                                Created a new campaign
+                                            {% elif activity.action == 'campaign_sent' %}
+                                                Sent a campaign
+                                            {% elif activity.action == 'template_created' %}
+                                                Created a new email template
+                                            {% elif activity.action == 'subscriber_list_created' %}
+                                                Created a new subscriber list
+                                            {% elif activity.action == 'profile_updated' %}
+                                                Updated profile information
+                                            {% elif activity.action == 'subscription_upgraded' %}
+                                                Upgraded subscription plan
+                                            {% elif activity.action == 'change_password' %}
+                                                Changed password
+                                            {% elif activity.action == 'subscriber_added' %}
+                                                Added a new subscriber
+                                            {% elif activity.action == 'subscriber_import' %}
+                                                Imported subscribers
+                                            {% elif activity.action == 'ab_test_created' %}
+                                                Created an A/B test
+                                            {% elif activity.action == 'ab_test_started' %}
+                                                Started an A/B test
+                                            {% elif activity.action == 'payment_successful' %}
+                                                Payment processed successfully
+                                            {% else %}
+                                                {{ activity.action|title }}
+                                            {% endif %}
+                                            
+                                            {% if activity.details.description %}
+                                                <span class="text-sm text-gray-500">{{ activity.details.description }}</span>
+                                            {% endif %}
+                                        </p>
+                                        <p class="text-gray-500 text-sm mt-1">{{ activity.timestamp|date:"F d, Y H:i" }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    {% if activities.has_other_pages %}
+                        <div class="mt-6 flex justify-center">
+                            <nav class="inline-flex rounded-md shadow">
+                                {% if activities.has_previous %}
+                                    <a href="?page={{ activities.previous_page_number }}" class="px-3 py-2 rounded-l-md border border-gray-300 bg-white text-gray-500 hover:bg-gray-50">
+                                        <i class="fas fa-chevron-left mr-1"></i> Previous
+                                    </a>
+                                {% endif %}
+                                
+                                <span class="px-3 py-2 border border-gray-300 bg-gray-100 text-gray-700">
+                                    {{ activities.number }} of {{ activities.paginator.num_pages }}
+                                </span>
+                                
+                                {% if activities.has_next %}
+                                    <a href="?page={{ activities.next_page_number }}" class="px-3 py-2 rounded-r-md border border-gray-300 bg-white text-gray-500 hover:bg-gray-50">
+                                        Next <i class="fas fa-chevron-right ml-1"></i>
+                                    </a>
+                                {% endif %}
+                            </nav>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-8">
+                        <div class="text-gray-400 mb-4">
+                            <i class="fas fa-history fa-4x"></i>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900">No Activity Yet</h3>
+                        <p class="text-gray-500 mt-1">Your account activity will appear here</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

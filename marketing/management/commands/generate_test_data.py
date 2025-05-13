@@ -152,13 +152,17 @@ class Command(BaseCommand):
             # Get a random list owner to associate with the subscriber
             list_owner = subscriber_lists[random.randint(0, len(subscriber_lists)-1)].owner
             
+            # Create a timezone-aware datetime for created_at
+            days_ago = random.randint(1, 365)
+            created_at = timezone.now() - timezone.timedelta(days=days_ago)
+            
             subscriber = Subscriber.objects.create(
                 owner=list_owner,
                 email=f'test_subscriber{i+1}@{domain}',
                 first_name=f'Subscriber{i+1}',
                 last_name=f'Test',
                 is_active=random.random() > 0.1,  # 90% are active
-                created_at=timezone.now() - timezone.timedelta(days=random.randint(1, 365))
+                created_at=created_at
             )
             subscribers.append(subscriber)
             
@@ -277,9 +281,13 @@ class Command(BaseCommand):
                 send_date = timezone.now()
                 
                 if status == 'scheduled':
-                    send_date = timezone.now() + timezone.timedelta(days=random.randint(1, 7))
+                    # Future date for scheduled campaigns
+                    days_ahead = random.randint(1, 7)
+                    send_date = timezone.now() + timezone.timedelta(days=days_ahead)
                 elif status == 'sent':
-                    send_date = timezone.now() - timezone.timedelta(days=random.randint(1, 30))
+                    # Past date for sent campaigns
+                    days_ago = random.randint(1, 30)
+                    send_date = timezone.now() - timezone.timedelta(days=days_ago)
                 
                 template = random.choice(user_templates)
                 
@@ -342,8 +350,11 @@ class Command(BaseCommand):
                 
                 # Create opens
                 for subscriber in opened_subscribers:
-                    open_time = campaign.sent_time + timezone.timedelta(minutes=random.randint(5, 1440))
+                    # Create timezone-aware datetime for open time
+                    minutes_after_sent = random.randint(5, 1440)
+                    open_time = campaign.sent_time + timezone.timedelta(minutes=minutes_after_sent)
                     if open_time > timezone.now():
+                        # If the calculated open time is in the future, use a time in the past
                         open_time = timezone.now() - timezone.timedelta(minutes=random.randint(5, 60))
                     
                     email_open = EmailOpen.objects.create(
@@ -362,8 +373,12 @@ class Command(BaseCommand):
         """Create subscription records for users with paid plans"""
         for user in users:
             if user.subscription_plan != 'free':
-                # Create an active subscription
-                sub_start_date = timezone.now() - timezone.timedelta(days=random.randint(1, 60))
+                # Create a timezone-aware start date
+                days_ago = random.randint(1, 60)
+                sub_start_date = timezone.now() - timezone.timedelta(days=days_ago)
+                
+                # Calculate next billing date
+                next_billing_date = sub_start_date + timezone.timedelta(days=30)
                 
                 Subscription.objects.create(
                     user=user,
@@ -371,7 +386,7 @@ class Command(BaseCommand):
                     status='active',
                     stripe_subscription_id=f'sub_test{user.id}',
                     start_date=sub_start_date,
-                    next_billing_date=sub_start_date + timezone.timedelta(days=30),
+                    next_billing_date=next_billing_date,
                     cancel_at_period_end=random.random() < 0.2,  # 20% chance of cancellation
                 )
 
@@ -391,7 +406,10 @@ class Command(BaseCommand):
             # Create between 5-20 activities per user
             for _ in range(random.randint(5, 20)):
                 activity_type = random.choice(activities)
-                activity_date = timezone.now() - timezone.timedelta(days=random.randint(1, 30))
+                
+                # Create timezone-aware datetime for activity
+                days_ago = random.randint(1, 30)
+                activity_date = timezone.now() - timezone.timedelta(days=days_ago)
                 
                 UserActivity.objects.create(
                     user=user,
