@@ -1,7 +1,8 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, PasswordChangeForm
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, PasswordChangeForm, UserChangeForm
 from django.contrib.auth import get_user_model
-from .models import CustomUser
+from django.core.exceptions import ValidationError
+from .models import CustomUser, SmtpSettings
 
 User = get_user_model()
 
@@ -84,4 +85,39 @@ class CustomPasswordChangeForm(PasswordChangeForm):
     )
     new_password2 = forms.CharField(
         widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Confirm New Password'})
-    ) 
+    )
+
+class CustomUserChangeForm(UserChangeForm):
+    password = None  # Don't show the password field
+    
+    class Meta:
+        model = CustomUser
+        fields = ('email', 'first_name', 'last_name', 'company_name', 'profile_image')
+        widgets = {
+            'profile_image': forms.FileInput(),
+        }
+
+class SmtpSettingsForm(forms.ModelForm):
+    password = forms.CharField(widget=forms.PasswordInput(), required=True)
+    
+    class Meta:
+        model = SmtpSettings
+        fields = ('host', 'port', 'username', 'password', 'use_tls', 'use_ssl', 'from_email', 'from_name', 'is_active')
+        widgets = {
+            'host': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., smtp.gmail.com'}),
+            'port': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '587'}),
+            'username': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'your@email.com'}),
+            'password': forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'App password for Gmail'}),
+            'from_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'your@email.com'}),
+            'from_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Your Name or Company'}),
+        }
+        
+    def clean(self):
+        cleaned_data = super().clean()
+        use_tls = cleaned_data.get('use_tls')
+        use_ssl = cleaned_data.get('use_ssl')
+        
+        if use_tls and use_ssl:
+            raise ValidationError("You cannot enable both TLS and SSL at the same time.")
+            
+        return cleaned_data 

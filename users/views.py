@@ -8,8 +8,8 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
-from .forms import CustomUserCreationForm, CustomAuthenticationForm, UserProfileForm, CustomPasswordChangeForm
-from .models import CustomUser, UserActivity, Subscription, SubscriptionInvoice
+from .forms import CustomUserCreationForm, CustomAuthenticationForm, UserProfileForm, CustomPasswordChangeForm, SmtpSettingsForm
+from .models import CustomUser, UserActivity, Subscription, SubscriptionInvoice, SmtpSettings
 from django.urls import reverse
 import stripe
 from django.http import JsonResponse, HttpResponse
@@ -870,3 +870,109 @@ def send_verification_email(request, user):
         [user.email],
         html_message=html_message,  # HTML version
     )
+
+@login_required
+def smtp_settings(request):
+    """
+    View for managing SMTP settings
+    """
+    try:
+        smtp_settings = SmtpSettings.objects.get(user=request.user)
+    except SmtpSettings.DoesNotExist:
+        smtp_settings = None
+    
+    if request.method == 'POST':
+        if smtp_settings:
+            form = SmtpSettingsForm(request.POST, instance=smtp_settings)
+        else:
+            form = SmtpSettingsForm(request.POST)
+        
+        if form.is_valid():
+            smtp_config = form.save(commit=False)
+            smtp_config.user = request.user
+            smtp_config.save()
+            
+            messages.success(request, 'SMTP settings updated successfully.')
+            return redirect('smtp_settings')
+    else:
+        if smtp_settings:
+            form = SmtpSettingsForm(instance=smtp_settings)
+        else:
+            # Set default values based on settings.py
+            initial_data = {
+                'host': settings.EMAIL_HOST,
+                'port': settings.EMAIL_PORT,
+                'username': settings.EMAIL_HOST_USER,
+                'password': '',  # Don't prefill password
+                'use_tls': settings.EMAIL_USE_TLS,
+                'from_email': settings.DEFAULT_FROM_EMAIL,
+                'from_name': request.user.get_full_name() or request.user.username
+            }
+            form = SmtpSettingsForm(initial=initial_data)
+    
+    context = {
+        'form': form,
+        'smtp_settings': smtp_settings
+    }
+    
+    return render(request, 'users/smtp_settings.html', context)
+
+@login_required
+def test_smtp_connection(request):
+    """
+    Test SMTP connection with current settings
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'})
+    
+    try:
+        smtp_settings = SmtpSettings.objects.get(user=request.user)
+        
+        # Test connection
+        import smtplib
+        from email.mime.text import MIMEText
+        
+        try:
+            # Create test connection
+            if smtp_settings.use_ssl:
+                server = smtplib.SMTP_SSL(smtp_settings.host, smtp_settings.port, timeout=10)
+            else:
+                server = smtplib.SMTP(smtp_settings.host, smtp_settings.port, timeout=10)
+                
+                if smtp_settings.use_tls:
+                    server.starttls()
+            
+            # Login
+            server.login(smtp_settings.username, smtp_settings.password)
+            
+            # Send test email if requested
+            if 'send_test' in request.POST:
+                msg = MIMEText('This is a test email from your EmailPro application.')
+                msg['Subject'] = 'EmailPro SMTP Test'
+                msg['From'] = f"{smtp_settings.from_name} <{smtp_settings.from_email}>"
+                msg['To'] = request.user.email
+                
+                server.send_message(msg)
+                
+                # Log activity
+                UserActivity.objects.create(
+                    user=request.user,
+                    action='smtp_test',
+                    description='Sent SMTP test email',
+                    ip_address=get_client_ip(request)
+                )
+                
+                success_message = 'SMTP connection successful. Test email sent to your email address.'
+            else:
+                success_message = 'SMTP connection successful.'
+            
+            # Close connection
+            server.quit()
+            
+            return JsonResponse({'success': True, 'message': success_message})
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Connection failed: {str(e)}'})
+        
+    except SmtpSettings.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'SMTP settings not found. Please save your settings first.'})

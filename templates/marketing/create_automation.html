@@ -1,0 +1,313 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Create Automation - EmailPro{% endblock %}
+
+{% block content %}
+<div class="container max-w-4xl mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Create Automation</h1>
+        <a href="{% url 'automation_dashboard' %}" class="text-indigo-600 hover:text-indigo-800">
+            <i class="fas fa-arrow-left mr-1"></i> Back to Automations
+        </a>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-circle text-red-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-red-700">
+                                {{ form.non_field_errors }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Automation Info Section -->
+            <div>
+                <h2 class="text-lg font-medium text-gray-800 mb-4">Automation Information</h2>
+                <div class="grid grid-cols-1 gap-6">
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-700 mb-1">
+                            Automation Name
+                        </label>
+                        <input type="text" name="name" id="name" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md h-10 px-3" placeholder="Enter automation name">
+                        {% if form.name.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.name.errors }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
+                            Description
+                        </label>
+                        <textarea name="description" id="description" rows="3" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md px-3 py-2" placeholder="Describe what this automation does"></textarea>
+                        {% if form.description.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.description.errors }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trigger Section -->
+            <div>
+                <h2 class="text-lg font-medium text-gray-800 mb-4">Trigger</h2>
+                <div class="bg-gray-50 p-4 rounded-md">
+                    <label for="trigger_type" class="block text-sm font-medium text-gray-700 mb-1">
+                        When should this automation start?
+                    </label>
+                    <select id="trigger_type" name="trigger_type" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm h-10">
+                        {% for trigger_id, trigger_name in trigger_types %}
+                            <option value="{{ trigger_id }}">{{ trigger_name }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if form.trigger_type.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.trigger_type.errors }}</p>
+                    {% endif %}
+                    
+                    <div id="list_trigger_options" class="mt-4 hidden">
+                        <label for="trigger_list" class="block text-sm font-medium text-gray-700 mb-1">
+                            Which list triggers this automation?
+                        </label>
+                        <select id="trigger_list" name="trigger_list" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm h-10">
+                            <option value="">Select a list...</option>
+                            {% for list in subscriber_lists %}
+                                <option value="{{ list.id }}">{{ list.name }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if form.trigger_list.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.trigger_list.errors }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Email Steps Section -->
+            <div>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-medium text-gray-800">Email Sequence</h2>
+                    <button type="button" id="add-step" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <i class="fas fa-plus mr-1"></i> Add Step
+                    </button>
+                </div>
+                
+                <div id="steps-container" class="space-y-4">
+                    <div class="step-item bg-gray-50 p-4 rounded-md" data-step="1">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-md font-medium">Step 1: Wait and Send Email</h3>
+                            <button type="button" class="remove-step text-red-600 hover:text-red-800">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="step_1_delay" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Wait Duration (days)
+                                </label>
+                                <input type="number" name="step_1_delay" id="step_1_delay" value="0" min="0" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md h-10 px-3">
+                            </div>
+                            <div>
+                                <label for="step_1_subject" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Email Subject
+                                </label>
+                                <input type="text" name="step_1_subject" id="step_1_subject" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md h-10 px-3" placeholder="Enter email subject">
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label for="step_1_content" class="block text-sm font-medium text-gray-700 mb-1">
+                                Email Content
+                            </label>
+                            <textarea name="step_1_content" id="step_1_content" rows="5" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md px-3 py-2" placeholder="Enter email content"></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <template id="step-template">
+                    <div class="step-item bg-gray-50 p-4 rounded-md" data-step="">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-md font-medium">Step <span class="step-number"></span>: Wait and Send Email</h3>
+                            <button type="button" class="remove-step text-red-600 hover:text-red-800">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="" class="step-delay-label block text-sm font-medium text-gray-700 mb-1">
+                                    Wait Duration (days)
+                                </label>
+                                <input type="number" name="" class="step-delay-input shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md h-10 px-3" value="1" min="0">
+                            </div>
+                            <div>
+                                <label for="" class="step-subject-label block text-sm font-medium text-gray-700 mb-1">
+                                    Email Subject
+                                </label>
+                                <input type="text" name="" class="step-subject-input shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md h-10 px-3" placeholder="Enter email subject">
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label for="" class="step-content-label block text-sm font-medium text-gray-700 mb-1">
+                                Email Content
+                            </label>
+                            <textarea name="" class="step-content-input shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md px-3 py-2" rows="5" placeholder="Enter email content"></textarea>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <div class="pt-5 border-t border-gray-200 flex justify-end space-x-3">
+                <a href="{% url 'automation_dashboard' %}" class="py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Cancel
+                </a>
+                <button type="submit" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Create Automation
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <div class="mt-6 bg-blue-50 border-l-4 border-blue-400 p-4">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-info-circle text-blue-400"></i>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-800">About Automation Steps</h3>
+                <p class="text-sm text-blue-700 mt-2">
+                    Each step consists of a wait period followed by an email. The first step's delay determines when the first email is sent after the trigger event. Subsequent delays are counted from the previous email.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const triggerTypeSelect = document.getElementById('trigger_type');
+        const listTriggerOptions = document.getElementById('list_trigger_options');
+        const stepsContainer = document.getElementById('steps-container');
+        const stepTemplate = document.getElementById('step-template');
+        const addStepButton = document.getElementById('add-step');
+        
+        // Toggle list selection based on trigger type
+        triggerTypeSelect.addEventListener('change', function() {
+            if (this.value === 'list_subscription') {
+                listTriggerOptions.classList.remove('hidden');
+            } else {
+                listTriggerOptions.classList.add('hidden');
+            }
+        });
+        
+        // Initially check the trigger type
+        if (triggerTypeSelect.value === 'list_subscription') {
+            listTriggerOptions.classList.remove('hidden');
+        }
+        
+        // Add new step
+        addStepButton.addEventListener('click', function() {
+            const steps = stepsContainer.querySelectorAll('.step-item');
+            const newStepNumber = steps.length + 1;
+            
+            const clone = document.importNode(stepTemplate.content, true);
+            const stepItem = clone.querySelector('.step-item');
+            
+            stepItem.dataset.step = newStepNumber;
+            clone.querySelector('.step-number').textContent = newStepNumber;
+            
+            // Update input names and IDs
+            const delayLabel = clone.querySelector('.step-delay-label');
+            const delayInput = clone.querySelector('.step-delay-input');
+            const subjectLabel = clone.querySelector('.step-subject-label');
+            const subjectInput = clone.querySelector('.step-subject-input');
+            const contentLabel = clone.querySelector('.step-content-label');
+            const contentInput = clone.querySelector('.step-content-input');
+            
+            delayLabel.setAttribute('for', `step_${newStepNumber}_delay`);
+            delayInput.setAttribute('name', `step_${newStepNumber}_delay`);
+            delayInput.setAttribute('id', `step_${newStepNumber}_delay`);
+            
+            subjectLabel.setAttribute('for', `step_${newStepNumber}_subject`);
+            subjectInput.setAttribute('name', `step_${newStepNumber}_subject`);
+            subjectInput.setAttribute('id', `step_${newStepNumber}_subject`);
+            
+            contentLabel.setAttribute('for', `step_${newStepNumber}_content`);
+            contentInput.setAttribute('name', `step_${newStepNumber}_content`);
+            contentInput.setAttribute('id', `step_${newStepNumber}_content`);
+            
+            stepsContainer.appendChild(clone);
+            setupRemoveStepListeners();
+        });
+        
+        // Setup remove step listeners
+        function setupRemoveStepListeners() {
+            const removeButtons = document.querySelectorAll('.remove-step');
+            removeButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const stepItem = this.closest('.step-item');
+                    if (document.querySelectorAll('.step-item').length > 1) {
+                        stepItem.remove();
+                        renumberSteps();
+                    } else {
+                        alert('You need at least one step in the automation.');
+                    }
+                });
+            });
+        }
+        
+        // Renumber steps after removal
+        function renumberSteps() {
+            const steps = stepsContainer.querySelectorAll('.step-item');
+            steps.forEach((step, index) => {
+                const newNumber = index + 1;
+                step.dataset.step = newNumber;
+                
+                const stepNumberElement = step.querySelector('.step-number');
+                if (stepNumberElement) {
+                    stepNumberElement.textContent = newNumber;
+                } else {
+                    const stepTitle = step.querySelector('h3');
+                    stepTitle.textContent = `Step ${newNumber}: Wait and Send Email`;
+                }
+                
+                // Update input names and IDs
+                const delayLabel = step.querySelector('label[for^="step_"]');
+                const delayInput = step.querySelector('input[name^="step_"][name$="_delay"]');
+                const subjectLabel = step.querySelector('label[for$="_subject"]');
+                const subjectInput = step.querySelector('input[name$="_subject"]');
+                const contentLabel = step.querySelector('label[for$="_content"]');
+                const contentInput = step.querySelector('textarea[name$="_content"]');
+                
+                if (delayLabel) delayLabel.setAttribute('for', `step_${newNumber}_delay`);
+                if (delayInput) {
+                    delayInput.setAttribute('name', `step_${newNumber}_delay`);
+                    delayInput.setAttribute('id', `step_${newNumber}_delay`);
+                }
+                
+                if (subjectLabel) subjectLabel.setAttribute('for', `step_${newNumber}_subject`);
+                if (subjectInput) {
+                    subjectInput.setAttribute('name', `step_${newNumber}_subject`);
+                    subjectInput.setAttribute('id', `step_${newNumber}_subject`);
+                }
+                
+                if (contentLabel) contentLabel.setAttribute('for', `step_${newNumber}_content`);
+                if (contentInput) {
+                    contentInput.setAttribute('name', `step_${newNumber}_content`);
+                    contentInput.setAttribute('id', `step_${newNumber}_content`);
+                }
+            });
+        }
+        
+        // Initial setup
+        setupRemoveStepListeners();
+    });
+</script>
+{% endblock %}
+{% endblock %} 

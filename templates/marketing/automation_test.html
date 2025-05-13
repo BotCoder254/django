@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Test Automation - EmailPro{% endblock %}
+
+{% block content %}
+<div class="container max-w-4xl mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Test Automation: {{ automation.name }}</h1>
+        <a href="{% url 'automation_dashboard' %}" class="text-indigo-600 hover:text-indigo-800">
+            <i class="fas fa-arrow-left mr-1"></i> Back to Automations
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="mb-6 {% if message.tags == 'success' %}bg-green-50 border-green-400{% elif message.tags == 'error' %}bg-red-50 border-red-400{% else %}bg-blue-50 border-blue-400{% endif %} border-l-4 p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        {% if message.tags == 'success' %}
+                            <i class="fas fa-check-circle text-green-400"></i>
+                        {% elif message.tags == 'error' %}
+                            <i class="fas fa-exclamation-circle text-red-400"></i>
+                        {% else %}
+                            <i class="fas fa-info-circle text-blue-400"></i>
+                        {% endif %}
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm {% if message.tags == 'success' %}text-green-700{% elif message.tags == 'error' %}text-red-700{% else %}text-blue-700{% endif %}">
+                            {{ message }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-lg font-medium text-gray-800 mb-4">Automation Details</h2>
+        
+        <dl class="grid grid-cols-1 gap-4 mb-6">
+            <div class="sm:col-span-1">
+                <dt class="text-sm font-medium text-gray-500">Name</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ automation.name }}</dd>
+            </div>
+            <div class="sm:col-span-1">
+                <dt class="text-sm font-medium text-gray-500">Trigger Type</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ automation.get_trigger_type_display }}</dd>
+            </div>
+            <div class="sm:col-span-1">
+                <dt class="text-sm font-medium text-gray-500">Status</dt>
+                <dd class="mt-1 text-sm text-gray-900">
+                    {% if automation.is_active %}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            Active
+                        </span>
+                    {% else %}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                            Inactive
+                        </span>
+                    {% endif %}
+                </dd>
+            </div>
+            {% if automation.description %}
+            <div class="sm:col-span-1">
+                <dt class="text-sm font-medium text-gray-500">Description</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ automation.description }}</dd>
+            </div>
+            {% endif %}
+        </dl>
+
+        <h3 class="text-md font-medium text-gray-700 mb-2">Automation Steps</h3>
+        <div class="space-y-4">
+            {% for step in steps %}
+                <div class="bg-gray-50 p-3 rounded-md">
+                    <div class="flex justify-between items-center">
+                        <div class="font-medium">Step {{ forloop.counter }}: {{ step.name }}</div>
+                        <div class="text-sm text-gray-500">{{ step.get_step_type_display }}</div>
+                    </div>
+                    {% if step.step_type == 'email' %}
+                        <div class="mt-2 text-sm">
+                            <div><span class="font-medium">Subject:</span> {{ step.config.subject }}</div>
+                            <div class="mt-1 text-gray-500">{{ step.config.content|truncatechars:100 }}</div>
+                        </div>
+                    {% elif step.step_type == 'wait' %}
+                        <div class="mt-1 text-sm text-gray-500">Wait for {{ step.config.days }} day(s)</div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-lg font-medium text-gray-800 mb-4">Test Automation</h2>
+        
+        <div class="tabs mb-6">
+            <div class="tab-buttons flex border-b border-gray-200">
+                <button id="simulation-tab-btn" class="tab-button mr-4 py-2 px-1 border-b-2 border-indigo-500 font-medium text-sm text-indigo-600">
+                    Simulation (No Real Emails)
+                </button>
+                <button id="real-tab-btn" class="tab-button py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                    Send Real Test Emails
+                </button>
+            </div>
+            
+            <div id="simulation-tab" class="tab-content mt-4">
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-yellow-700">
+                                This will simulate the automation for testing purposes. No real emails will be sent.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <form method="post" class="space-y-4">
+                    {% csrf_token %}
+                    
+                    <div>
+                        <label for="test_email" class="block text-sm font-medium text-gray-700 mb-1">
+                            Test Email Address
+                        </label>
+                        <input type="email" name="test_email" id="test_email" required 
+                            class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md h-10 px-3"
+                            placeholder="Enter email to test with">
+                        <p class="mt-1 text-xs text-gray-500">
+                            Results will be displayed below, but emails will not actually be sent.
+                        </p>
+                    </div>
+                    
+                    <div class="pt-4">
+                        <button type="submit" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Simulate Automation
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <div id="real-tab" class="tab-content mt-4 hidden">
+                <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle text-red-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-red-700">
+                                <strong>Warning:</strong> This will send real emails using your SMTP settings. Make sure to use a valid email address that you have access to.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <form method="post" class="space-y-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="send_real_test" value="true">
+                    
+                    <div>
+                        <label for="real_test_email" class="block text-sm font-medium text-gray-700 mb-1">
+                            Test Email Address
+                        </label>
+                        <input type="email" name="test_email" id="real_test_email" required 
+                            class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md h-10 px-3"
+                            placeholder="Enter email to send to">
+                        <p class="mt-1 text-xs text-gray-500">
+                            All email steps in the automation will be sent as test emails to this address.
+                        </p>
+                    </div>
+                    
+                    <div class="pt-4">
+                        <button type="submit" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                            Send Real Test Emails
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    {% if test_results %}
+        <div class="mt-6 bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-lg font-medium text-gray-800 mb-4">Test Results</h2>
+            
+            <div class="bg-green-50 border-l-4 border-green-400 p-4 mb-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-check-circle text-green-400"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-green-700">
+                            Simulation completed successfully for {{ test_email }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <h3 class="text-md font-medium text-gray-700 mb-2">Email Sequence Timeline</h3>
+            <div class="overflow-hidden overflow-x-auto">
+                <div class="relative py-6">
+                    <div class="absolute left-9 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+                    
+                    {% for result in test_results %}
+                        <div class="relative flex items-start mb-6 {% if not forloop.last %}pb-6 border-b border-gray-200{% endif %}">
+                            <div class="flex-shrink-0 w-9">
+                                {% if result.type == 'trigger' %}
+                                    <div class="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500">
+                                        <i class="fas fa-play"></i>
+                                    </div>
+                                {% elif result.type == 'email' %}
+                                    <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-500">
+                                        <i class="fas fa-envelope"></i>
+                                    </div>
+                                {% elif result.type == 'wait' %}
+                                    <div class="h-8 w-8 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-500">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="ml-4 min-w-0 flex-1">
+                                <div class="text-sm font-medium text-gray-900">{{ result.title }}</div>
+                                <div class="mt-1 text-sm text-gray-500">{{ result.description }}</div>
+                                <div class="mt-2 text-xs text-gray-400">{{ result.time }}</div>
+                                
+                                {% if result.type == 'email' %}
+                                    <div class="mt-2 pt-2 border-t border-gray-100">
+                                        <div class="text-xs font-medium text-gray-500">Subject: {{ result.subject }}</div>
+                                        <div class="mt-1 text-xs text-gray-500">{{ result.content|truncatechars:200 }}</div>
+                                        <a href="#" class="mt-1 text-xs text-indigo-600 hover:text-indigo-900">Preview email &rarr;</a>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const simulationTabBtn = document.getElementById('simulation-tab-btn');
+        const realTabBtn = document.getElementById('real-tab-btn');
+        const simulationTab = document.getElementById('simulation-tab');
+        const realTab = document.getElementById('real-tab');
+        
+        simulationTabBtn.addEventListener('click', function() {
+            simulationTabBtn.classList.add('border-indigo-500', 'text-indigo-600');
+            simulationTabBtn.classList.remove('border-transparent', 'text-gray-500');
+            realTabBtn.classList.remove('border-indigo-500', 'text-indigo-600');
+            realTabBtn.classList.add('border-transparent', 'text-gray-500');
+            
+            simulationTab.classList.remove('hidden');
+            realTab.classList.add('hidden');
+        });
+        
+        realTabBtn.addEventListener('click', function() {
+            realTabBtn.classList.add('border-indigo-500', 'text-indigo-600');
+            realTabBtn.classList.remove('border-transparent', 'text-gray-500');
+            simulationTabBtn.classList.remove('border-indigo-500', 'text-indigo-600');
+            simulationTabBtn.classList.add('border-transparent', 'text-gray-500');
+            
+            realTab.classList.remove('hidden');
+            simulationTab.classList.add('hidden');
+        });
+    });
+</script>
+{% endblock %} 

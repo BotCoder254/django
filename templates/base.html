@@ -84,6 +84,10 @@
                         <i class="fas fa-flask mr-2"></i>
                         <span>A/B Testing</span>
                     </a>
+                    <a href="{% url 'automation_dashboard' %}" class="flex items-center text-gray-600 hover:text-indigo-600 transition-colors">
+                        <i class="fas fa-robot mr-2"></i>
+                        <span>Automations</span>
+                    </a>
                 {% endif %}
             </nav>
             
@@ -191,6 +195,10 @@
                     </a>
                     <a href="{% url 'ab_testing' %}" class="flex items-center px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">
                         <i class="fas fa-flask mr-2"></i> A/B Testing
+                    </a>
+                    <a href="{% url 'automation_dashboard' %}" class="flex items-center px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">
+                        <i class="fas fa-robot mr-2"></i>
+                        <span>Automations</span>
                     </a>
                     <a href="{% url 'profile' %}" class="flex items-center px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">
                         <i class="fas fa-user mr-2"></i> Profile

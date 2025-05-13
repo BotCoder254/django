@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Automation - EmailPro{% endblock %}
+
+{% block content %}
+<div class="container max-w-lg mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Delete Automation</h1>
+        <a href="{% url 'automation_dashboard' %}" class="text-indigo-600 hover:text-indigo-800">
+            <i class="fas fa-arrow-left mr-1"></i> Back to Automations
+        </a>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="mb-6">
+            <div class="bg-red-50 border-l-4 border-red-400 p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-red-400"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Warning: This action cannot be undone</h3>
+                        <div class="mt-2 text-sm text-red-700">
+                            <p>You are about to delete the automation "<strong>{{ automation.name }}</strong>". This will permanently remove all associated data, including statistics and tracked events.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <h2 class="text-lg font-medium text-gray-800 mb-4">Automation Details</h2>
+            <dl class="grid grid-cols-1 gap-4">
+                <div class="sm:col-span-1">
+                    <dt class="text-sm font-medium text-gray-500">Name</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ automation.name }}</dd>
+                </div>
+                <div class="sm:col-span-1">
+                    <dt class="text-sm font-medium text-gray-500">Trigger Type</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ automation.get_trigger_type_display }}</dd>
+                </div>
+                <div class="sm:col-span-1">
+                    <dt class="text-sm font-medium text-gray-500">Created On</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ automation.created_at|date:"F j, Y" }}</dd>
+                </div>
+                {% if automation.description %}
+                <div class="sm:col-span-1">
+                    <dt class="text-sm font-medium text-gray-500">Description</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ automation.description }}</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <div class="border border-gray-300 rounded-md p-4">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <input id="confirm" name="confirm" type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" required>
+                    </div>
+                    <div class="ml-3">
+                        <label for="confirm" class="font-medium text-gray-700">I confirm that I want to delete this automation</label>
+                        <p class="text-sm text-gray-500">Type the name of the automation below to confirm deletion.</p>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <input type="text" name="automation_name" id="automation_name" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md h-10 px-3" placeholder="Enter automation name" required>
+                </div>
+            </div>
+
+            <div class="pt-5 flex justify-end space-x-3">
+                <a href="{% url 'automation_dashboard' %}" class="py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Cancel
+                </a>
+                <button type="submit" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                    Delete Automation
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        const nameInput = document.getElementById('automation_name');
+        const submitButton = form.querySelector('button[type="submit"]');
+        const automationName = "{{ automation.name }}";
+        
+        form.addEventListener('submit', function(e) {
+            if (nameInput.value !== automationName) {
+                e.preventDefault();
+                alert('Please enter the exact automation name to confirm deletion.');
+                return false;
+            }
+        });
+        
+        nameInput.addEventListener('input', function() {
+            if (this.value === automationName) {
+                submitButton.disabled = false;
+                submitButton.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                submitButton.disabled = true;
+                submitButton.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        });
+        
+        // Initially disable the submit button
+        submitButton.disabled = true;
+        submitButton.classList.add('opacity-50', 'cursor-not-allowed');
+    });
+</script>
+{% endblock %}
+{% endblock %} 

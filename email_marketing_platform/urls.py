@@ -18,11 +18,20 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from marketing import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('marketing.urls')),
     path('accounts/', include('users.urls')),
+    path('automations/', views.automation_dashboard, name='automation_dashboard'),
+    path('automations/create/', views.create_automation, name='create_automation'),
+    path('automations/<int:pk>/edit/', views.edit_automation, name='edit_automation'),
+    path('automations/<int:pk>/delete/', views.delete_automation, name='delete_automation'),
+    path('automations/<int:pk>/stats/', views.automation_stats, name='automation_stats'),
+    path('automations/<int:pk>/test/', views.test_automation, name='test_automation'),
+    path('automations/template/<str:template>/', views.create_automation_from_template, name='create_automation_from_template'),
+    path('campaigns/<int:pk>/test/', views.test_campaign, name='test_campaign'),
 ]
 
 if settings.DEBUG:

@@ -42,4 +42,8 @@ urlpatterns = [
     
     # Stripe webhook
     path('webhook/stripe/', views.stripe_webhook, name='stripe_webhook'),
+
+    # Add these to urlpatterns
+    path('settings/smtp/', views.smtp_settings, name='smtp_settings'),
+    path('settings/smtp/test/', views.test_smtp_connection, name='test_smtp_connection'),
 ] 

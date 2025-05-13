@@ -281,11 +281,11 @@ class Command(BaseCommand):
                 send_date = timezone.now()
                 
                 if status == 'scheduled':
-                    # Future date for scheduled campaigns
+                    # Future date for scheduled campaigns (timezone-aware)
                     days_ahead = random.randint(1, 7)
                     send_date = timezone.now() + timezone.timedelta(days=days_ahead)
                 elif status == 'sent':
-                    # Past date for sent campaigns
+                    # Past date for sent campaigns (timezone-aware)
                     days_ago = random.randint(1, 30)
                     send_date = timezone.now() - timezone.timedelta(days=days_ago)
                 

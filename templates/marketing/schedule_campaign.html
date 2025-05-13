@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Schedule Campaign - EmailPro{% endblock %}
+
+{% block content %}
+<div class="container max-w-2xl mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Schedule Campaign</h1>
+        <a href="{% url 'campaign_detail' pk=campaign.pk %}" class="text-indigo-600 hover:text-indigo-800">
+            <i class="fas fa-arrow-left mr-1"></i> Back to Campaign
+        </a>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-2">{{ campaign.name }}</h2>
+            <p class="text-gray-600">{{ campaign.subject }}</p>
+        </div>
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-circle text-red-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-red-700">
+                                {{ form.non_field_errors }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="bg-gray-50 p-4 rounded-md">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-800">Campaign Summary</h3>
+                </div>
+                
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Recipient Lists:</span>
+                        <span class="text-gray-900 font-medium">
+                            {% for list in campaign.lists.all %}
+                                {{ list.name }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </span>
+                    </div>
+                    
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">From:</span>
+                        <span class="text-gray-900 font-medium">{{ campaign.from_name }} &lt;{{ campaign.from_email }}&gt;</span>
+                    </div>
+                    
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Subject:</span>
+                        <span class="text-gray-900 font-medium">{{ campaign.subject }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label for="{{ form.schedule_time.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                    Schedule Time
+                </label>
+                <div class="mt-1 relative">
+                    <div class="flex items-center">
+                        {% render_field form.schedule_time class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md h-10 px-3" type="datetime-local" %}
+                    </div>
+                    {% if form.schedule_time.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.schedule_time.errors }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-sm text-gray-500">Select the date and time when the campaign should be sent</p>
+                </div>
+            </div>
+
+            <div class="bg-yellow-50 p-4 rounded-md border border-yellow-100">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-info-circle text-yellow-500"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-yellow-800">Important Information</h3>
+                        <div class="mt-2 text-sm text-yellow-700">
+                            <ul class="list-disc space-y-1 pl-5">
+                                <li>Once scheduled, the campaign will be sent automatically at the specified time.</li>
+                                <li>You can cancel the scheduled campaign anytime before it's sent.</li>
+                                <li>Make sure your subscriber lists are up to date before scheduling.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-5 border-t border-gray-200 flex justify-end space-x-3">
+                <a href="{% url 'campaign_detail' pk=campaign.pk %}" class="py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Cancel
+                </a>
+                <button type="submit" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Schedule Campaign
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Ensure datetime-local field has a minimum value of now
+    document.addEventListener('DOMContentLoaded', function() {
+        const datetimeField = document.querySelector('input[type="datetime-local"]');
+        if (datetimeField) {
+            // Get current date and time
+            const now = new Date();
+            
+            // Format for datetime-local input (YYYY-MM-DDThh:mm)
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            
+            const formattedNow = `${year}-${month}-${day}T${hours}:${minutes}`;
+            
+            // Set min attribute
+            datetimeField.min = formattedNow;
+        }
+    });
+</script>
+{% endblock %} 

@@ -1,8 +1,15 @@
 from django.db import models
 from django.conf import settings
-from django.utils.text import slugify
-import json
 from django.utils import timezone
+from django.utils.text import slugify
+import uuid
+import datetime
+import random
+import string
+import json
+
+# Import needed for automation_stats
+from django.db.models import Count, Sum
 
 class Subscriber(models.Model):
     """
@@ -580,3 +587,71 @@ class ABTestVariant(models.Model):
             self.send_time = timezone.make_aware(self.send_time)
             
         super().save(*args, **kwargs)
+
+class Automation(models.Model):
+    """
+    Model for email automation workflows
+    """
+    TRIGGER_TYPES = (
+        ('subscription', 'New Subscription'),
+        ('abandoned_cart', 'Abandoned Cart'),
+        ('birthday', 'Birthday'),
+        ('anniversary', 'Anniversary'),
+        ('inactivity', 'Inactivity'),
+        ('purchase', 'Purchase'),
+        ('custom', 'Custom Event'),
+    )
+    
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='automations')
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    trigger_type = models.CharField(max_length=50, choices=TRIGGER_TYPES)
+    trigger_details = models.JSONField(default=dict)
+    is_active = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Performance metrics
+    sent_count = models.PositiveIntegerField(default=0)
+    open_count = models.PositiveIntegerField(default=0)
+    click_count = models.PositiveIntegerField(default=0)
+    
+    @property
+    def open_rate(self):
+        """Calculate open rate as a percentage"""
+        if self.sent_count > 0:
+            return round((self.open_count / self.sent_count) * 100, 1)
+        return 0
+    
+    @property
+    def click_rate(self):
+        """Calculate click rate as a percentage"""
+        if self.sent_count > 0:
+            return round((self.click_count / self.sent_count) * 100, 1)
+        return 0
+    
+    def __str__(self):
+        return self.name
+
+class AutomationStep(models.Model):
+    """
+    Individual steps in an automation workflow
+    """
+    STEP_TYPES = (
+        ('email', 'Send Email'),
+        ('wait', 'Wait Period'),
+        ('condition', 'Condition Check'),
+        ('action', 'Custom Action'),
+    )
+    
+    automation = models.ForeignKey(Automation, on_delete=models.CASCADE, related_name='steps')
+    name = models.CharField(max_length=255)
+    step_type = models.CharField(max_length=50, choices=STEP_TYPES)
+    position = models.PositiveIntegerField(default=0)
+    config = models.JSONField(default=dict)
+    
+    class Meta:
+        ordering = ['position']
+    
+    def __str__(self):
+        return f"{self.automation.name} - {self.name}"

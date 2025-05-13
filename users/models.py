@@ -150,3 +150,27 @@ class UserActivity(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.action} - {self.timestamp}"
+
+class SmtpSettings(models.Model):
+    """
+    Model for storing SMTP settings for a user
+    """
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='smtp_settings')
+    host = models.CharField(max_length=255, default='smtp.gmail.com')
+    port = models.PositiveIntegerField(default=587)
+    username = models.EmailField(max_length=255)
+    password = models.CharField(max_length=255, help_text='For Gmail, use an app password')
+    use_tls = models.BooleanField(default=True)
+    use_ssl = models.BooleanField(default=False)
+    from_email = models.EmailField(max_length=255, help_text='Email address to send from')
+    from_name = models.CharField(max_length=100, help_text='Name to display in the from field')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'SMTP Setting'
+        verbose_name_plural = 'SMTP Settings'
+    
+    def __str__(self):
+        return f"SMTP Settings for {self.user.email}"

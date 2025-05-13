@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Count, Sum, Avg, F, Q
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.core.mail import send_mail, EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -14,6 +14,10 @@ import io
 import json
 import datetime
 import os
+import random
+import string
+import uuid
+import smtplib
 
 from .models import (
     Subscriber, 
@@ -26,7 +30,9 @@ from .models import (
     UserActivity,
     ABTestCampaign,
     ABTestVariant,
-    Segment
+    Segment,
+    Automation,
+    AutomationStep
 )
 from .forms import (
     SubscriberForm,
@@ -37,6 +43,18 @@ from .forms import (
     CampaignScheduleForm,
     ContactForm
 )
+from users.models import SmtpSettings
+
+def get_client_ip(request):
+    """
+    Get the client IP address from the request
+    """
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
 
 # Public views for landing page and marketing pages
 def landing_page(request):
@@ -1798,4 +1816,721 @@ def subscriber_activity(request, pk):
         'opens_count': opens.count(),
         'clicks_count': clicks.count(),
         'campaigns_count': events.values('campaign').distinct().count()
-    }) 
+    })
+
+# Automation views
+@login_required
+def automation_dashboard(request):
+    """
+    Display automation dashboard with all automations
+    """
+    automations = Automation.objects.filter(owner=request.user).order_by('-created_at')
+    
+    return render(request, 'marketing/automation_dashboard.html', {
+        'automations': automations
+    })
+
+@login_required
+def create_automation(request):
+    """
+    Create a new automation workflow
+    """
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        description = request.POST.get('description', '')
+        trigger_type = request.POST.get('trigger_type')
+        
+        if not name or not trigger_type:
+            messages.error(request, 'Please provide a name and trigger type for your automation.')
+            return redirect('create_automation')
+        
+        # Create the automation
+        automation = Automation.objects.create(
+            owner=request.user,
+            name=name,
+            description=description,
+            trigger_type=trigger_type,
+            trigger_details={},  # Default empty details
+            is_active=False  # Default to inactive until fully configured
+        )
+        
+        # Create default steps based on trigger type
+        if trigger_type == 'subscription':
+            # Create a welcome email step
+            AutomationStep.objects.create(
+                automation=automation,
+                name='Welcome Email',
+                step_type='email',
+                position=0,
+                config={
+                    'subject': 'Welcome to our newsletter!',
+                    'content': 'Thank you for subscribing to our newsletter.'
+                }
+            )
+        
+        # Log activity
+        UserActivity.log_activity(
+            user=request.user,
+            action='other',
+            description=f"Created automation: {name}",
+            metadata={'automation_id': automation.id}
+        )
+        
+        messages.success(request, 'Automation created successfully. Now add some steps to your workflow.')
+        return redirect('edit_automation', pk=automation.id)
+    
+    # For GET request - show creation form
+    trigger_types = Automation.TRIGGER_TYPES
+    
+    return render(request, 'marketing/create_automation.html', {
+        'trigger_types': trigger_types
+    })
+
+@login_required
+def edit_automation(request, pk):
+    """
+    Edit an existing automation workflow
+    """
+    automation = get_object_or_404(Automation, pk=pk, owner=request.user)
+    steps = automation.steps.all().order_by('position')
+    
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        description = request.POST.get('description', '')
+        trigger_type = request.POST.get('trigger_type')
+        is_active = request.POST.get('is_active') == 'on'
+        
+        if not name or not trigger_type:
+            messages.error(request, 'Please provide a name and trigger type for your automation.')
+            return redirect('edit_automation', pk=automation.id)
+        
+        # Update automation details
+        automation.name = name
+        automation.description = description
+        automation.trigger_type = trigger_type
+        automation.is_active = is_active
+        automation.save()
+        
+        # Handle trigger-specific details
+        if trigger_type == 'inactivity':
+            days = request.POST.get('inactive_days', 30)
+            automation.trigger_details = {'days': int(days)}
+            automation.save()
+        elif trigger_type == 'birthday':
+            days_before = request.POST.get('days_before', 0)
+            automation.trigger_details = {'days_before': int(days_before)}
+            automation.save()
+        
+        messages.success(request, 'Automation updated successfully.')
+        return redirect('automation_dashboard')
+    
+    # For GET request - show edit form
+    trigger_types = Automation.TRIGGER_TYPES
+    
+    return render(request, 'marketing/edit_automation.html', {
+        'automation': automation,
+        'steps': steps,
+        'trigger_types': trigger_types
+    })
+
+@login_required
+def delete_automation(request, pk):
+    """
+    Delete an automation workflow
+    """
+    automation = get_object_or_404(Automation, pk=pk, owner=request.user)
+    
+    if request.method == 'POST':
+        automation_name = automation.name
+        automation.delete()
+        
+        # Log activity
+        UserActivity.log_activity(
+            user=request.user,
+            action='other',
+            description=f"Deleted automation: {automation_name}",
+            metadata={}
+        )
+        
+        messages.success(request, 'Automation deleted successfully.')
+        return redirect('automation_dashboard')
+    
+    return render(request, 'marketing/delete_automation.html', {
+        'automation': automation
+    })
+
+@login_required
+def automation_stats(request, pk):
+    """
+    View statistics for an automation
+    """
+    automation = get_object_or_404(Automation, pk=pk, owner=request.user)
+    steps = automation.steps.all().order_by('position')
+    
+    # Toggle automation activation if requested
+    if request.method == 'POST' and 'toggle_activation' in request.POST:
+        automation.is_active = not automation.is_active
+        automation.save()
+        
+        status = "activated" if automation.is_active else "deactivated"
+        messages.success(request, f'Automation {status} successfully.')
+        
+        # Create notification
+        Notification.create_notification(
+            user=request.user,
+            message=f"Automation {status}: {automation.name}",
+            notification_type='system',
+            related_object=automation
+        )
+        
+        # Log activity
+        UserActivity.log_activity(
+            user=request.user,
+            action='other',
+            description=f"{status.capitalize()} automation: {automation.name}",
+            metadata={'automation_id': automation.id}
+        )
+        
+        return redirect('automation_stats', pk=automation.id)
+    
+    # Get step-specific stats
+    total_subscribers = random.randint(100, 500)  # In a real app, you would get this from the database
+    completed_subscribers = random.randint(0, total_subscribers)
+    total_emails_sent = 0
+    total_opens = 0
+    total_clicks = 0
+    
+    # Calculate stats for each step
+    step_stats = []
+    for step in steps:
+        if step.step_type == 'email':
+            # In a real app, you would calculate these from the database
+            sent = random.randint(50, 200)
+            opened = int(sent * random.uniform(0.3, 0.6))
+            clicked = int(opened * random.uniform(0.1, 0.3))
+            
+            total_emails_sent += sent
+            total_opens += opened
+            total_clicks += clicked
+            
+            step_stats.append({
+                'step': step,
+                'delay_days': step.config.get('days', 0),
+                'email_subject': step.config.get('subject', ''),
+                'sent_count': sent,
+                'sent_percentage': round((sent / total_subscribers) * 100 if total_subscribers > 0 else 0, 1),
+                'open_rate': round((opened / sent) * 100 if sent > 0 else 0, 1),
+                'click_rate': round((clicked / sent) * 100 if sent > 0 else 0, 1)
+            })
+    
+    # Generate random activity data
+    recent_activity = []
+    activity_types = ['email_sent', 'email_opened', 'link_clicked', 'subscriber_added', 'subscriber_completed']
+    
+    for _ in range(10):
+        activity_type = random.choice(activity_types)
+        
+        if activity_type == 'email_sent':
+            message = f"Email sent to subscriber"
+        elif activity_type == 'email_opened':
+            message = f"Subscriber opened email"
+        elif activity_type == 'link_clicked':
+            message = f"Subscriber clicked link in email"
+        elif activity_type == 'subscriber_added':
+            message = f"New subscriber added to automation"
+        elif activity_type == 'subscriber_completed':
+            message = f"Subscriber completed automation"
+        
+        # Generate random timestamp within last week
+        random_days = random.randint(0, 7)
+        random_hours = random.randint(0, 23)
+        random_minutes = random.randint(0, 59)
+        timestamp = timezone.now() - datetime.timedelta(days=random_days, hours=random_hours, minutes=random_minutes)
+        
+        recent_activity.append({
+            'type': activity_type,
+            'message': message,
+            'timestamp': timestamp,
+            'subscriber': {
+                'email': f"user{random.randint(1, 100)}@example.com"
+            }
+        })
+    
+    # Sort by timestamp (newest first)
+    recent_activity.sort(key=lambda x: x['timestamp'], reverse=True)
+    
+    # Calculate overall metrics
+    open_rate = round((total_opens / total_emails_sent) * 100 if total_emails_sent > 0 else 0, 1)
+    click_rate = round((total_clicks / total_emails_sent) * 100 if total_emails_sent > 0 else 0, 1)
+    completed_percentage = round((completed_subscribers / total_subscribers) * 100 if total_subscribers > 0 else 0, 1)
+    avg_emails_per_subscriber = round(total_emails_sent / completed_subscribers, 1) if completed_subscribers > 0 else 0
+    
+    context = {
+        'automation': automation,
+        'steps': steps,
+        'step_stats': step_stats,
+        'total_subscribers': total_subscribers,
+        'completed_subscribers': completed_subscribers,
+        'completed_percentage': completed_percentage,
+        'total_emails_sent': total_emails_sent,
+        'avg_emails_per_subscriber': avg_emails_per_subscriber,
+        'total_opens': total_opens,
+        'total_clicks': total_clicks,
+        'open_rate': open_rate,
+        'click_rate': click_rate,
+        'recent_activity': recent_activity
+    }
+    
+    return render(request, 'marketing/automation_stats.html', context)
+
+@login_required
+def test_automation(request, pk):
+    """
+    Test an automation workflow with simulated results
+    """
+    automation = get_object_or_404(Automation, pk=pk, owner=request.user)
+    steps = automation.steps.all().order_by('position')
+    
+    context = {
+        'automation': automation,
+        'steps': steps,
+    }
+    
+    if request.method == 'POST':
+        test_email = request.POST.get('test_email')
+        
+        if not test_email:
+            messages.error(request, 'Please provide an email address for testing.')
+            return redirect('test_automation', pk=automation.id)
+        
+        # Generate test results
+        test_results = []
+        
+        # Start with trigger event
+        trigger_time = timezone.now()
+        
+        test_results.append({
+            'type': 'trigger',
+            'title': f"Automation Triggered: {automation.get_trigger_type_display()}",
+            'description': f"Subscriber {test_email} entered the automation sequence.",
+            'time': trigger_time.strftime("%b %d, %Y at %H:%M")
+        })
+        
+        # Add each step
+        current_time = trigger_time
+        
+        for step in steps:
+            if step.step_type == 'wait':
+                wait_days = step.config.get('days', 1)
+                
+                current_time += datetime.timedelta(days=wait_days)
+                
+                test_results.append({
+                    'type': 'wait',
+                    'title': f"Wait Period: {wait_days} day(s)",
+                    'description': f"System waited {wait_days} day(s) before proceeding to the next step.",
+                    'time': current_time.strftime("%b %d, %Y at %H:%M")
+                })
+                
+            elif step.step_type == 'email':
+                subject = step.config.get('subject', '(No subject)')
+                content = step.config.get('content', '(No content)')
+                
+                test_results.append({
+                    'type': 'email',
+                    'title': f"Email Sent: {step.name}",
+                    'description': f"Email sent to {test_email}",
+                    'time': current_time.strftime("%b %d, %Y at %H:%M"),
+                    'subject': subject,
+                    'content': content
+                })
+                
+                # Simulate open and click events
+                if random.random() > 0.3:  # 70% chance of opening
+                    open_time = current_time + datetime.timedelta(hours=random.randint(1, 24))
+                    
+                    test_results.append({
+                        'type': 'email',
+                        'title': f"Email Opened",
+                        'description': f"Subscriber {test_email} opened the email",
+                        'time': open_time.strftime("%b %d, %Y at %H:%M")
+                    })
+                    
+                    if random.random() > 0.5:  # 50% chance of clicking if opened
+                        click_time = open_time + datetime.timedelta(minutes=random.randint(1, 30))
+                        
+                        test_results.append({
+                            'type': 'email',
+                            'title': f"Link Clicked",
+                            'description': f"Subscriber {test_email} clicked a link in the email",
+                            'time': click_time.strftime("%b %d, %Y at %H:%M")
+                        })
+        
+        context.update({
+            'test_results': test_results,
+            'test_email': test_email
+        })
+        
+        # Log activity
+        UserActivity.log_activity(
+            user=request.user,
+            action='other',
+            description=f"Tested automation: {automation.name}",
+            metadata={'automation_id': automation.id, 'test_email': test_email}
+        )
+    
+    return render(request, 'marketing/automation_test.html', context)
+
+@login_required
+def create_automation_from_template(request, template):
+    """
+    Create an automation from a predefined template
+    """
+    # Define templates with default configurations
+    templates = {
+        'welcome': {
+            'name': 'Welcome Series',
+            'description': 'A 3-part welcome series for new subscribers',
+            'trigger_type': 'subscription',
+            'steps': [
+                {
+                    'name': 'Welcome Email',
+                    'step_type': 'email',
+                    'position': 0,
+                    'config': {
+                        'subject': 'Welcome to our community!',
+                        'content': 'Thank you for subscribing to our newsletter. We\'re excited to have you join our community! Here\'s what you can expect from us:\n\n- Regular updates on our products and services\n- Exclusive content and offers for subscribers\n- Tips and best practices in our industry\n\nFeel free to reply to this email if you have any questions!'
+                    }
+                },
+                {
+                    'name': 'Wait 3 Days',
+                    'step_type': 'wait',
+                    'position': 1,
+                    'config': {
+                        'days': 3
+                    }
+                },
+                {
+                    'name': 'Value Email',
+                    'step_type': 'email',
+                    'position': 2,
+                    'config': {
+                        'subject': 'Here\'s what you might have missed',
+                        'content': 'Hello again!\n\nWe wanted to share some valuable resources with you that might be helpful:\n\n1. Our comprehensive guide to getting started\n2. Popular articles from our blog\n3. Case studies from successful customers\n\nClick the links above to learn more, and don\'t hesitate to reach out if you need any assistance!'
+                    }
+                },
+                {
+                    'name': 'Wait 4 Days',
+                    'step_type': 'wait',
+                    'position': 3,
+                    'config': {
+                        'days': 4
+                    }
+                },
+                {
+                    'name': 'Final Email',
+                    'step_type': 'email',
+                    'position': 4,
+                    'config': {
+                        'subject': 'Special offer for new subscribers',
+                        'content': 'Hello there!\n\nAs a valued new subscriber, we\'d like to offer you a special discount on our premium plan. Use the code WELCOME20 at checkout to get 20% off your first purchase.\n\nThis offer is valid for 7 days, so don\'t miss out!\n\nBest regards,\nThe Team'
+                    }
+                }
+            ]
+        },
+        're_engagement': {
+            'name': 'Re-engagement Campaign',
+            'description': 'Win back inactive subscribers',
+            'trigger_type': 'inactivity',
+            'trigger_details': {'days': 60},
+            'steps': [
+                {
+                    'name': 'Re-engagement Email',
+                    'step_type': 'email',
+                    'position': 0,
+                    'config': {
+                        'subject': 'We miss you!',
+                        'content': 'Hi there,\n\nWe noticed it\'s been a while since you\'ve engaged with our content. We miss you and wanted to check in!\n\nWe\'ve been working on some exciting new features and content that we think you\'ll love. Click below to see what\'s new.\n\nWe hope to see you back soon!'
+                    }
+                },
+                {
+                    'name': 'Wait 5 Days',
+                    'step_type': 'wait',
+                    'position': 1,
+                    'config': {
+                        'days': 5
+                    }
+                },
+                {
+                    'name': 'Final Re-engagement Email',
+                    'step_type': 'email',
+                    'position': 2,
+                    'config': {
+                        'subject': 'Last chance: Special offer inside',
+                        'content': 'Hi there,\n\nWe\'d hate to see you go, but we understand that interests change over time.\n\nBefore you make your final decision, we\'d like to offer you a special discount of 30% on any of our plans. Just use the code COMEBACK30 at checkout.\n\nIf we don\'t hear from you in the next week, we\'ll respect your inbox and pause our emails. You can resubscribe anytime!\n\nBest regards,\nThe Team'
+                    }
+                }
+            ]
+        },
+        'post_purchase': {
+            'name': 'Post-Purchase Follow-up',
+            'description': 'Thank customers and request reviews',
+            'trigger_type': 'purchase',
+            'steps': [
+                {
+                    'name': 'Thank You Email',
+                    'step_type': 'email',
+                    'position': 0,
+                    'config': {
+                        'subject': 'Thank you for your purchase!',
+                        'content': 'Dear valued customer,\n\nThank you for your recent purchase! We\'re thrilled that you chose our product and hope it exceeds your expectations.\n\nYour order is being processed and will be shipped shortly. You\'ll receive tracking information as soon as it\'s available.\n\nIf you have any questions about your order, please don\'t hesitate to contact our customer support team.\n\nBest regards,\nThe Team'
+                    }
+                },
+                {
+                    'name': 'Wait 3 Days',
+                    'step_type': 'wait',
+                    'position': 1,
+                    'config': {
+                        'days': 3
+                    }
+                },
+                {
+                    'name': 'Review Request',
+                    'step_type': 'email',
+                    'position': 2,
+                    'config': {
+                        'subject': 'How are you enjoying your recent purchase?',
+                        'content': 'Hi there!\n\nWe hope you\'re enjoying your recent purchase!\n\nYour feedback is incredibly valuable to us. If you have a moment, we\'d appreciate it if you could leave a review of your experience. This helps other customers make informed decisions and helps us improve our products and services.\n\nThank you for your support!\n\nBest regards,\nThe Team'
+                    }
+                }
+            ]
+        },
+        'birthday': {
+            'name': 'Birthday Celebration',
+            'description': 'Send special offers on customer birthdays',
+            'trigger_type': 'birthday',
+            'steps': [
+                {
+                    'name': 'Birthday Greeting',
+                    'step_type': 'email',
+                    'position': 0,
+                    'config': {
+                        'subject': 'Happy Birthday! 🎂 A special gift inside',
+                        'content': 'Happy Birthday!\n\nWe wanted to wish you a fantastic birthday and thank you for being part of our community. To celebrate your special day, we\'re giving you a gift!\n\nUse the code BIRTHDAY25 to get 25% off your next purchase. This code is valid for 7 days.\n\nHave a wonderful day!\n\nBest wishes,\nThe Team'
+                    }
+                }
+            ]
+        },
+        'product_education': {
+            'name': 'Product Education Series',
+            'description': 'Help customers get the most out of your product',
+            'trigger_type': 'purchase',
+            'steps': [
+                {
+                    'name': 'Getting Started Guide',
+                    'step_type': 'email',
+                    'position': 0,
+                    'config': {
+                        'subject': 'Getting Started with Your New Product',
+                        'content': 'Welcome to the family!\n\nWe\'re excited that you\'ve chosen our product. To help you get started quickly, we\'ve put together a comprehensive guide.\n\nIn this email, we\'ll cover the basics of setting up your product and some initial configuration steps. By the end, you\'ll be ready to start using your new purchase!\n\nIf you have any questions, our support team is always ready to help.'
+                    }
+                },
+                {
+                    'name': 'Wait 2 Days',
+                    'step_type': 'wait',
+                    'position': 1,
+                    'config': {
+                        'days': 2
+                    }
+                },
+                {
+                    'name': 'Tips and Tricks',
+                    'step_type': 'email',
+                    'position': 2,
+                    'config': {
+                        'subject': 'Pro Tips for Getting More from Your Product',
+                        'content': 'Hi there!\n\nNow that you\'ve had some time to explore the basic features, we wanted to share some pro tips to help you get even more value from your purchase.\n\nHere are 5 power-user tips that many customers don\'t discover right away:\n\n1. Keyboard shortcuts for faster navigation\n2. Advanced customization options\n3. Integration capabilities with other tools\n4. Automation features to save time\n5. Analytics dashboards to track performance\n\nTry these out and let us know what you think!'
+                    }
+                },
+                {
+                    'name': 'Wait 4 Days',
+                    'step_type': 'wait',
+                    'position': 3,
+                    'config': {
+                        'days': 4
+                    }
+                },
+                {
+                    'name': 'Advanced Features',
+                    'step_type': 'email',
+                    'position': 4,
+                    'config': {
+                        'subject': 'Unlock Advanced Features You Might Have Missed',
+                        'content': 'Hello again!\n\nBy now, you\'re probably comfortable with the main features of our product. It\'s time to dive into some of the more advanced capabilities that can take your experience to the next level.\n\nIn this guide, we\'ll explore:\n\n- Advanced reporting and analytics\n- Team collaboration features\n- Custom automation workflows\n- API integrations\n- White-labeling options\n\nReady to become a power user? Let\'s get started!'
+                    }
+                }
+            ]
+        },
+        'cart_abandonment': {
+            'name': 'Cart Abandonment Recovery',
+            'description': 'Recover abandoned shopping carts',
+            'trigger_type': 'abandoned_cart',
+            'steps': [
+                {
+                    'name': 'First Reminder',
+                    'step_type': 'email',
+                    'position': 0,
+                    'config': {
+                        'subject': 'You left something in your cart',
+                        'content': 'Hi there,\n\nLooks like you left some items in your shopping cart! We\'ve saved them for you in case you want to complete your purchase.\n\nJust click the button below to return to your cart. If you have any questions about these products, our customer service team is happy to help.\n\nHappy shopping!'
+                    }
+                },
+                {
+                    'name': 'Wait 1 Day',
+                    'step_type': 'wait',
+                    'position': 1,
+                    'config': {
+                        'days': 1
+                    }
+                },
+                {
+                    'name': 'Special Offer',
+                    'step_type': 'email',
+                    'position': 2,
+                    'config': {
+                        'subject': 'Special offer for your cart items',
+                        'content': 'Hello again,\n\nWe noticed you still have items in your cart. To make your decision easier, we\'re offering a 10% discount on these items.\n\nUse code CART10 at checkout to claim your discount. This offer is valid for 24 hours only!\n\nClick below to complete your purchase and save money today.'
+                    }
+                },
+                {
+                    'name': 'Wait 1 Day',
+                    'step_type': 'wait',
+                    'position': 3,
+                    'config': {
+                        'days': 1
+                    }
+                },
+                {
+                    'name': 'Final Reminder',
+                    'step_type': 'email',
+                    'position': 4,
+                    'config': {
+                        'subject': 'Last chance: Your cart will expire soon',
+                        'content': 'Hi there,\n\nThis is a friendly reminder that your shopping cart will expire soon. Don\'t miss out on the items you carefully selected!\n\nIf you\'re having any issues with the checkout process, our support team is ready to assist you.\n\nComplete your purchase now to secure your items.'
+                    }
+                }
+            ]
+        }
+    }
+    
+    # Check if the requested template exists
+    if template not in templates:
+        messages.error(request, 'Template not found.')
+        return redirect('automation_dashboard')
+    
+    # Get the template configuration
+    template_config = templates[template]
+    
+    # Create the automation
+    automation = Automation.objects.create(
+        owner=request.user,
+        name=template_config['name'],
+        description=template_config['description'],
+        trigger_type=template_config['trigger_type'],
+        trigger_details=template_config.get('trigger_details', {}),
+        is_active=False
+    )
+    
+    # Create the steps
+    for step_config in template_config['steps']:
+        AutomationStep.objects.create(
+            automation=automation,
+            name=step_config['name'],
+            step_type=step_config['step_type'],
+            position=step_config['position'],
+            config=step_config['config']
+        )
+    
+    # Log activity
+    UserActivity.log_activity(
+        user=request.user,
+        action='other',
+        description=f"Created automation from template: {template_config['name']}",
+        metadata={'automation_id': automation.id, 'template': template}
+    )
+    
+    messages.success(request, f'Automation created successfully from the {template_config["name"]} template.')
+    return redirect('edit_automation', pk=automation.id) 
+
+@login_required
+def test_campaign(request, pk):
+    """
+    Test a campaign by sending a test email
+    """
+    campaign = get_object_or_404(Campaign, pk=pk, owner=request.user)
+    
+    if request.method == 'POST':
+        test_email = request.POST.get('test_email')
+        
+        if not test_email:
+            messages.error(request, 'Please provide an email address for testing.')
+            return redirect('test_campaign', pk=campaign.pk)
+        
+        # Check if SMTP settings are configured
+        try:
+            smtp_settings = SmtpSettings.objects.get(user=request.user)
+            
+            # Test connection and send email
+            try:
+                # Create test email
+                from email.mime.text import MIMEText
+                from email.mime.multipart import MIMEMultipart
+                
+                msg = MIMEMultipart('alternative')
+                msg['Subject'] = campaign.subject
+                msg['From'] = f"{smtp_settings.from_name} <{smtp_settings.from_email}>"
+                msg['To'] = test_email
+                
+                # Attach plain text and HTML versions
+                text_part = MIMEText(campaign.content, 'plain')
+                msg.attach(text_part)
+                
+                if campaign.html_content:
+                    html_part = MIMEText(campaign.html_content, 'html')
+                    msg.attach(html_part)
+                
+                # Connect to SMTP server
+                if smtp_settings.use_ssl:
+                    server = smtplib.SMTP_SSL(smtp_settings.host, smtp_settings.port, timeout=10)
+                else:
+                    server = smtplib.SMTP(smtp_settings.host, smtp_settings.port, timeout=10)
+                    
+                    if smtp_settings.use_tls:
+                        server.starttls()
+                
+                # Login and send
+                server.login(smtp_settings.username, smtp_settings.password)
+                server.send_message(msg)
+                server.quit()
+                
+                # Log activity
+                UserActivity.log_activity(
+                    user=request.user,
+                    action='campaign_tested',
+                    description=f"Tested campaign: {campaign.name}",
+                    metadata={
+                        'campaign_id': campaign.id,
+                        'test_email': test_email
+                    }
+                )
+                
+                messages.success(request, f'Test email sent to {test_email} successfully.')
+                
+            except Exception as e:
+                messages.error(request, f'Failed to send test email: {str(e)}')
+        
+        except SmtpSettings.DoesNotExist:
+            messages.error(request, 'SMTP settings not found. Please configure your SMTP settings first.')
+            return redirect('smtp_settings')
+    
+    return render(request, 'marketing/test_campaign.html', {'campaign': campaign})

@@ -1,28 +1,30 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
-from .models import CustomUser, UserActivity, Subscription, SubscriptionInvoice
+from .models import CustomUser, UserActivity, Subscription, SubscriptionInvoice, SmtpSettings
+from .forms import CustomUserCreationForm, CustomUserChangeForm
 
 class CustomUserAdmin(UserAdmin):
+    add_form = CustomUserCreationForm
+    form = CustomUserChangeForm
+    model = CustomUser
+    list_display = ('email', 'username', 'company_name', 'subscription_plan', 'is_staff', 'is_active', 'is_verified')
+    list_filter = ('subscription_plan', 'is_staff', 'is_active', 'is_verified')
     fieldsets = (
-        (None, {'fields': ('username', 'password')}),
-        (_('Personal info'), {'fields': ('first_name', 'last_name', 'email', 'company_name', 'profile_image')}),
-        (_('Subscription'), {'fields': ('subscription_plan', 'usage_quota', 'usage_count', 'is_verified', 
-                                       'stripe_customer_id', 'stripe_subscription_id', 'subscription_renewal',
-                                       'payment_method_id', 'has_active_payment_method')}),
-        (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
-        (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
+        (None, {'fields': ('email', 'username', 'password')}),
+        ('Personal Info', {'fields': ('first_name', 'last_name', 'company_name', 'profile_image')}),
+        ('Subscription', {'fields': ('subscription_plan', 'usage_quota', 'usage_count')}),
+        ('Stripe Integration', {'fields': ('stripe_customer_id', 'stripe_subscription_id', 'subscription_renewal', 'payment_method_id', 'has_active_payment_method')}),
+        ('Permissions', {'fields': ('is_verified', 'is_staff', 'is_active', 'groups', 'user_permissions')}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('username', 'email', 'password1', 'password2', 'company_name', 'subscription_plan'),
-        }),
+            'fields': ('email', 'username', 'password1', 'password2', 'is_staff', 'is_active')}
+        ),
     )
-    list_display = ('email', 'username', 'first_name', 'last_name', 'company_name', 'subscription_plan', 'usage_quota', 'usage_count', 'is_verified', 'is_staff')
-    search_fields = ('email', 'username', 'first_name', 'last_name', 'company_name')
-    list_filter = ('is_staff', 'is_superuser', 'is_active', 'subscription_plan', 'is_verified')
-    ordering = ('-date_joined',)
+    search_fields = ('email', 'username', 'company_name')
+    ordering = ('email',)
     actions = ['verify_users', 'upgrade_to_premium', 'upgrade_to_enterprise', 'reset_to_free', 'reset_usage_counts']
     
     def verify_users(self, request, queryset):
@@ -120,6 +122,28 @@ class SubscriptionInvoiceAdmin(admin.ModelAdmin):
         updated = queryset.update(status='pending')
         self.message_user(request, f'{updated} invoices have been marked as pending.')
     mark_as_pending.short_description = "Mark selected invoices as pending"
+
+@admin.register(SmtpSettings)
+class SmtpSettingsAdmin(admin.ModelAdmin):
+    list_display = ('user', 'host', 'port', 'from_email', 'is_active', 'updated_at')
+    list_filter = ('is_active', 'use_tls', 'use_ssl')
+    search_fields = ('user__email', 'host', 'username', 'from_email', 'from_name')
+    readonly_fields = ('created_at', 'updated_at')
+    fieldsets = (
+        (None, {
+            'fields': ('user', 'is_active'),
+        }),
+        ('SMTP Server Settings', {
+            'fields': ('host', 'port', 'username', 'password', 'use_tls', 'use_ssl'),
+        }),
+        ('Email Settings', {
+            'fields': ('from_email', 'from_name'),
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',),
+        }),
+    )
 
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(UserActivity, UserActivityAdmin)

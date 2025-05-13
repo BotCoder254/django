@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Edit Campaign - EmailPro{% endblock %}
+
+{% block content %}
+<div class="container max-w-4xl mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Edit Campaign</h1>
+        <a href="{% url 'campaign_detail' pk=campaign.pk %}" class="text-indigo-600 hover:text-indigo-800">
+            <i class="fas fa-arrow-left mr-1"></i> Back to Campaign
+        </a>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-circle text-red-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-red-700">
+                                {{ form.non_field_errors }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Campaign Info Section -->
+            <div>
+                <h2 class="text-lg font-medium text-gray-800 mb-4">Campaign Information</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Campaign Name
+                        </label>
+                        {% render_field form.name class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md h-10 px-3" placeholder="Enter campaign name" %}
+                        {% if form.name.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.name.errors }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.subject.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Subject Line
+                        </label>
+                        {% render_field form.subject class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md h-10 px-3" placeholder="Enter subject line" %}
+                        {% if form.subject.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.subject.errors }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sender Information Section -->
+            <div>
+                <h2 class="text-lg font-medium text-gray-800 mb-4">Sender Information</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="{{ form.from_name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            From Name
+                        </label>
+                        {% render_field form.from_name class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md h-10 px-3" placeholder="Enter sender name" %}
+                        {% if form.from_name.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.from_name.errors }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.from_email.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            From Email
+                        </label>
+                        {% render_field form.from_email class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md h-10 px-3" placeholder="Enter sender email" %}
+                        {% if form.from_email.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.from_email.errors }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <label for="{{ form.reply_to.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Reply-To Email (Optional)
+                    </label>
+                    {% render_field form.reply_to class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md h-10 px-3" placeholder="Enter reply-to email if different from sender" %}
+                    {% if form.reply_to.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.reply_to.errors }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Subscriber Lists Section -->
+            <div>
+                <h2 class="text-lg font-medium text-gray-800 mb-4">Subscriber Lists</h2>
+                <div class="bg-gray-50 p-4 rounded-md mb-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {% for checkbox in form.lists %}
+                            <div class="flex items-start">
+                                <div class="flex items-center h-5">
+                                    {{ checkbox.tag }}
+                                </div>
+                                <div class="ml-3 text-sm">
+                                    <label for="{{ checkbox.id_for_label }}" class="font-medium text-gray-700">{{ checkbox.choice_label }}</label>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    {% if form.lists.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.lists.errors }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Email Content Section -->
+            <div>
+                <h2 class="text-lg font-medium text-gray-800 mb-4">Email Content</h2>
+                
+                <div class="mb-6">
+                    <label for="{{ form.template.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Email Template (Optional)
+                    </label>
+                    {% render_field form.template class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md h-10 px-3" %}
+                    {% if form.template.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.template.errors }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-sm text-gray-500">Select a template or create content from scratch below</p>
+                </div>
+                
+                <div class="mb-6">
+                    <label for="{{ form.content.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Plain Text Content
+                    </label>
+                    {% render_field form.content class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" rows="6" placeholder="Enter plain text version of your email (for clients that do not support HTML)" %}
+                    {% if form.content.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.content.errors }}</p>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label for="{{ form.html_content.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        HTML Content
+                    </label>
+                    {% render_field form.html_content class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" rows="12" placeholder="Enter HTML content for your email" %}
+                    {% if form.html_content.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.html_content.errors }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-sm text-gray-500">
+                        Use HTML to create a rich email. You can use variables like: <code>{{subscriber.first_name}}</code>, <code>{{subscriber.email}}</code>
+                    </p>
+                </div>
+            </div>
+
+            <div class="pt-5 border-t border-gray-200 flex justify-end space-x-3">
+                <a href="{% url 'campaign_detail' pk=campaign.pk %}" class="py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Cancel
+                </a>
+                <button type="submit" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Update Campaign
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <div class="mt-6 bg-blue-50 border-l-4 border-blue-400 p-4">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-info-circle text-blue-400"></i>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-800">About Campaign Editing</h3>
+                <p class="text-sm text-blue-700 mt-2">
+                    You can only edit campaigns that are in draft status. Once a campaign is scheduled or sent, it cannot be modified.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}SMTP Settings - EmailPro{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Email SMTP Settings</h1>
+        <a href="{% url 'dashboard' %}" class="text-indigo-600 hover:text-indigo-800 flex items-center">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="mb-6 {% if message.tags == 'success' %}bg-green-50 border-green-400{% elif message.tags == 'error' %}bg-red-50 border-red-400{% else %}bg-blue-50 border-blue-400{% endif %} border-l-4 p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        {% if message.tags == 'success' %}
+                            <i class="fas fa-check-circle text-green-400"></i>
+                        {% elif message.tags == 'error' %}
+                            <i class="fas fa-exclamation-circle text-red-400"></i>
+                        {% else %}
+                            <i class="fas fa-info-circle text-blue-400"></i>
+                        {% endif %}
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm {% if message.tags == 'success' %}text-green-700{% elif message.tags == 'error' %}text-red-700{% else %}text-blue-700{% endif %}">
+                            {{ message }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-medium text-gray-800">Configure Email SMTP Settings</h2>
+            <p class="mt-1 text-sm text-gray-500">
+                These settings will be used for sending emails from your campaigns and automations.
+            </p>
+        </div>
+
+        <div class="p-6">
+            <form method="post" id="smtp-form">
+                {% csrf_token %}
+                
+                <div class="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-yellow-700">
+                                <strong>Important:</strong> If you're using Gmail, you need to use an <a href="https://support.google.com/accounts/answer/185833" target="_blank" class="underline">App Password</a>. Regular password won't work due to Google's security policies.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="space-y-6">
+                    <!-- Server Settings Section -->
+                    <div>
+                        <h3 class="text-md font-medium text-gray-800 mb-3">SMTP Server Settings</h3>
+                        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                            <div>
+                                <label for="{{ form.host.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                    SMTP Host
+                                </label>
+                                <div class="mt-1">
+                                    {% render_field form.host class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full h-10 sm:text-sm border-gray-300 rounded-md px-3" %}
+                                </div>
+                                {% if form.host.errors %}
+                                <p class="mt-2 text-sm text-red-600">{{ form.host.errors }}</p>
+                                {% endif %}
+                            </div>
+                            
+                            <div>
+                                <label for="{{ form.port.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                    Port
+                                </label>
+                                <div class="mt-1">
+                                    {% render_field form.port class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full h-10 sm:text-sm border-gray-300 rounded-md px-3" %}
+                                </div>
+                                {% if form.port.errors %}
+                                <p class="mt-2 text-sm text-red-600">{{ form.port.errors }}</p>
+                                {% endif %}
+                            </div>
+                            
+                            <div>
+                                <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                    SMTP Username
+                                </label>
+                                <div class="mt-1">
+                                    {% render_field form.username class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full h-10 sm:text-sm border-gray-300 rounded-md px-3" %}
+                                </div>
+                                {% if form.username.errors %}
+                                <p class="mt-2 text-sm text-red-600">{{ form.username.errors }}</p>
+                                {% endif %}
+                            </div>
+                            
+                            <div>
+                                <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                    SMTP Password
+                                </label>
+                                <div class="mt-1">
+                                    {% render_field form.password class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full h-10 sm:text-sm border-gray-300 rounded-md px-3" placeholder="For Gmail, use an App Password" %}
+                                </div>
+                                {% if form.password.errors %}
+                                <p class="mt-2 text-sm text-red-600">{{ form.password.errors }}</p>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="sm:col-span-2 flex space-x-6">
+                                <div class="flex items-center">
+                                    {% render_field form.use_tls class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" %}
+                                    <label for="{{ form.use_tls.id_for_label }}" class="ml-2 block text-sm text-gray-700">
+                                        Use TLS (usually port 587)
+                                    </label>
+                                </div>
+                                
+                                <div class="flex items-center">
+                                    {% render_field form.use_ssl class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" %}
+                                    <label for="{{ form.use_ssl.id_for_label }}" class="ml-2 block text-sm text-gray-700">
+                                        Use SSL (usually port 465)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sender Settings Section -->
+                    <div>
+                        <h3 class="text-md font-medium text-gray-800 mb-3">Sender Information</h3>
+                        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                            <div>
+                                <label for="{{ form.from_email.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                    From Email
+                                </label>
+                                <div class="mt-1">
+                                    {% render_field form.from_email class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full h-10 sm:text-sm border-gray-300 rounded-md px-3" %}
+                                </div>
+                                {% if form.from_email.errors %}
+                                <p class="mt-2 text-sm text-red-600">{{ form.from_email.errors }}</p>
+                                {% endif %}
+                            </div>
+                            
+                            <div>
+                                <label for="{{ form.from_name.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                    From Name
+                                </label>
+                                <div class="mt-1">
+                                    {% render_field form.from_name class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full h-10 sm:text-sm border-gray-300 rounded-md px-3" %}
+                                </div>
+                                {% if form.from_name.errors %}
+                                <p class="mt-2 text-sm text-red-600">{{ form.from_name.errors }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Status Section -->
+                    <div>
+                        <div class="flex items-center">
+                            {% render_field form.is_active class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" %}
+                            <label for="{{ form.is_active.id_for_label }}" class="ml-2 block text-sm font-medium text-gray-700">
+                                Active (use these settings for sending emails)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
+                    <button type="button" id="test-connection" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <i class="fas fa-vial mr-2"></i> Test Connection
+                    </button>
+                    <button type="button" id="send-test-email" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <i class="fas fa-paper-plane mr-2"></i> Send Test Email
+                    </button>
+                    <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <i class="fas fa-save mr-2"></i> Save Settings
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="mt-8 bg-blue-50 border-l-4 border-blue-400 p-4">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-info-circle text-blue-400"></i>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-800">About SMTP Settings</h3>
+                <div class="mt-2 text-sm text-blue-700">
+                    <p>These SMTP settings will be used for all outgoing emails, including:</p>
+                    <ul class="list-disc list-inside mt-2">
+                        <li>Campaign emails sent to your subscribers</li>
+                        <li>Automation workflow emails</li>
+                        <li>Test emails</li>
+                    </ul>
+                    <p class="mt-2">If you're using Gmail, you'll need to:</p>
+                    <ol class="list-decimal list-inside mt-2">
+                        <li>Enable 2-factor authentication on your Google account</li>
+                        <li>Generate an app password specifically for this application</li>
+                        <li>Use that app password instead of your regular Gmail password</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const testConnectionBtn = document.getElementById('test-connection');
+        const sendTestEmailBtn = document.getElementById('send-test-email');
+        
+        testConnectionBtn.addEventListener('click', function() {
+            testSmtpConnection(false);
+        });
+        
+        sendTestEmailBtn.addEventListener('click', function() {
+            testSmtpConnection(true);
+        });
+        
+        function testSmtpConnection(sendTest) {
+            // Get the form data
+            const form = document.getElementById('smtp-form');
+            const formData = new FormData(form);
+            
+            if (sendTest) {
+                formData.append('send_test', 'true');
+            }
+            
+            // Disable buttons and show loading
+            testConnectionBtn.disabled = true;
+            sendTestEmailBtn.disabled = true;
+            testConnectionBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i> Testing...';
+            
+            // Send the request
+            fetch('{% url "test_smtp_connection" %}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Create status message
+                const messageDiv = document.createElement('div');
+                messageDiv.className = data.success 
+                    ? 'mb-6 bg-green-50 border-green-400 border-l-4 p-4' 
+                    : 'mb-6 bg-red-50 border-red-400 border-l-4 p-4';
+                
+                messageDiv.innerHTML = `
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-${data.success ? 'check-circle text-green-400' : 'exclamation-circle text-red-400'}"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm ${data.success ? 'text-green-700' : 'text-red-700'}">
+                                ${data.message}
+                            </p>
+                        </div>
+                    </div>
+                `;
+                
+                // Insert before the form
+                const form = document.getElementById('smtp-form').parentNode;
+                form.parentNode.insertBefore(messageDiv, form);
+                
+                // Auto-remove message after 10 seconds
+                setTimeout(() => {
+                    messageDiv.remove();
+                }, 10000);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while testing the connection. Please try again.');
+            })
+            .finally(() => {
+                // Re-enable buttons
+                testConnectionBtn.disabled = false;
+                sendTestEmailBtn.disabled = false;
+                testConnectionBtn.innerHTML = '<i class="fas fa-vial mr-2"></i> Test Connection';
+            });
+        }
+    });
+</script>
+{% endblock %} 
