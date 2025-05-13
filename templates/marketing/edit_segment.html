@@ -1,0 +1,366 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Audience Segment{% endblock %}
+
+{% block extra_css %}
+<style>
+  .condition-row {
+    margin-bottom: 1rem;
+    transition: all 0.2s ease;
+  }
+  .condition-row:hover {
+    background-color: rgba(249, 250, 251, 1);
+  }
+  .operator-select, .field-select {
+    min-width: 180px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="mb-8 flex items-center justify-between">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-800">Edit Audience Segment</h1>
+      <p class="text-gray-600 mt-2">Update your segment conditions and settings</p>
+    </div>
+    <div>
+      <a href="{% url 'segment_list' %}" class="text-indigo-600 hover:text-indigo-800">
+        <i class="fas fa-arrow-left mr-1"></i> Back to Segments
+      </a>
+    </div>
+  </div>
+
+  <form method="post" class="bg-white rounded-lg shadow-md p-6">
+    {% csrf_token %}
+    <input type="hidden" id="condition_count" name="condition_count" value="{{ conditions|length }}">
+    
+    <!-- Basic Information -->
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b">Basic Information</h2>
+      
+      <div class="mb-4">
+        <label for="name" class="block text-sm font-medium text-gray-700">Segment Name</label>
+        <input type="text" name="name" id="name" required value="{{ segment.name }}"
+               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+      </div>
+      
+      <div class="mb-4">
+        <label for="description" class="block text-sm font-medium text-gray-700">Description (Optional)</label>
+        <textarea name="description" id="description" rows="2"
+                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">{{ segment.description }}</textarea>
+      </div>
+    </div>
+    
+    <!-- Condition Type -->
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b">Match Type</h2>
+      
+      <div class="mt-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Subscribers must match:</label>
+        <div class="flex items-start space-x-4">
+          <div class="flex items-center">
+            <input id="condition_type_all" name="condition_type" value="all" type="radio" {% if segment.condition_type == 'all' %}checked{% endif %}
+                   class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300">
+            <label for="condition_type_all" class="ml-3 block text-sm font-medium text-gray-700">
+              ALL conditions (AND)
+            </label>
+          </div>
+          <div class="flex items-center">
+            <input id="condition_type_any" name="condition_type" value="any" type="radio" {% if segment.condition_type == 'any' %}checked{% endif %}
+                   class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300">
+            <label for="condition_type_any" class="ml-3 block text-sm font-medium text-gray-700">
+              ANY condition (OR)
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Conditions -->
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b flex justify-between items-center">
+        <span>Conditions</span>
+        <button type="button" id="add-condition" class="text-sm text-indigo-600 hover:text-indigo-900">
+          <i class="fas fa-plus-circle mr-1"></i> Add Condition
+        </button>
+      </h2>
+      
+      <div id="conditions-container">
+        <!-- Existing conditions will be populated by JavaScript -->
+      </div>
+      
+      <div class="mt-4 text-sm text-gray-500">
+        <i class="fas fa-info-circle mr-1"></i> Add at least one condition to create your segment.
+      </div>
+    </div>
+    
+    <div class="flex items-center justify-end space-x-3 pt-4 border-t">
+      <a href="{% url 'segment_list' %}" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        Cancel
+      </a>
+      <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        Save Changes
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const conditionsContainer = document.getElementById('conditions-container');
+    const addConditionButton = document.getElementById('add-condition');
+    const conditionCountInput = document.getElementById('condition_count');
+    
+    let conditionCount = 0;
+    
+    // Field options
+    const allFields = [
+      {value: 'email', label: 'Email Address'},
+      {value: 'first_name', label: 'First Name'},
+      {value: 'last_name', label: 'Last Name'},
+      {value: 'country', label: 'Country'},
+      {value: 'city', label: 'City'},
+      {value: 'state', label: 'State/Province'},
+      {value: 'age', label: 'Age'},
+      {value: 'gender', label: 'Gender'},
+      {value: 'date_joined', label: 'Date Subscribed'},
+      {value: 'last_activity', label: 'Last Activity Date'},
+      {value: 'open_rate', label: 'Open Rate (%)'},
+      {value: 'click_rate', label: 'Click Rate (%)'},
+      {value: 'tags', label: 'Tags'},
+      {value: 'custom_field', label: 'Custom Field'}
+    ];
+    
+    // Common operators
+    const textOperators = [
+      {value: 'contains', label: 'Contains'},
+      {value: 'not_contains', label: 'Does not contain'},
+      {value: 'equals', label: 'Equals'},
+      {value: 'not_equals', label: 'Does not equal'},
+      {value: 'starts_with', label: 'Starts with'},
+      {value: 'ends_with', label: 'Ends with'},
+      {value: 'is_empty', label: 'Is empty'},
+      {value: 'is_not_empty', label: 'Is not empty'}
+    ];
+    
+    const numberOperators = [
+      {value: 'equals', label: 'Equals'},
+      {value: 'not_equals', label: 'Does not equal'},
+      {value: 'greater_than', label: 'Greater than'},
+      {value: 'less_than', label: 'Less than'},
+      {value: 'between', label: 'Between'}
+    ];
+    
+    const dateOperators = [
+      {value: 'before', label: 'Before'},
+      {value: 'after', label: 'After'},
+      {value: 'between', label: 'Between'},
+      {value: 'within_last', label: 'Within the last'},
+      {value: 'older_than', label: 'Older than'}
+    ];
+    
+    // Function to get operators based on field type
+    function getOperatorsForField(field) {
+      if (['age', 'open_rate', 'click_rate'].includes(field)) {
+        return numberOperators;
+      } else if (['date_joined', 'last_activity'].includes(field)) {
+        return dateOperators;
+      } else {
+        return textOperators;
+      }
+    }
+    
+    // Function to add a new condition row
+    function addConditionRow(existingCondition = null) {
+      const rowIndex = conditionCount;
+      
+      const conditionRow = document.createElement('div');
+      conditionRow.className = 'condition-row flex flex-wrap items-center gap-3 p-3 border rounded-md mb-4';
+      conditionRow.dataset.index = rowIndex;
+      
+      // Field select
+      const fieldSelectDiv = document.createElement('div');
+      fieldSelectDiv.className = 'field-select';
+      
+      const fieldLabel = document.createElement('label');
+      fieldLabel.className = 'block text-xs font-medium text-gray-500 mb-1';
+      fieldLabel.textContent = 'Field';
+      fieldLabel.htmlFor = `condition_${rowIndex}_field`;
+      
+      const fieldSelect = document.createElement('select');
+      fieldSelect.className = 'block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md';
+      fieldSelect.name = `condition_${rowIndex}_field`;
+      fieldSelect.id = `condition_${rowIndex}_field`;
+      
+      allFields.forEach(field => {
+        const option = document.createElement('option');
+        option.value = field.value;
+        option.textContent = field.label;
+        if (existingCondition && existingCondition.field === field.value) {
+          option.selected = true;
+        }
+        fieldSelect.appendChild(option);
+      });
+      
+      fieldSelectDiv.appendChild(fieldLabel);
+      fieldSelectDiv.appendChild(fieldSelect);
+      
+      // Operator select
+      const operatorSelectDiv = document.createElement('div');
+      operatorSelectDiv.className = 'operator-select';
+      
+      const operatorLabel = document.createElement('label');
+      operatorLabel.className = 'block text-xs font-medium text-gray-500 mb-1';
+      operatorLabel.textContent = 'Operator';
+      operatorLabel.htmlFor = `condition_${rowIndex}_operator`;
+      
+      const operatorSelect = document.createElement('select');
+      operatorSelect.className = 'block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md';
+      operatorSelect.name = `condition_${rowIndex}_operator`;
+      operatorSelect.id = `condition_${rowIndex}_operator`;
+      
+      // Get operators for the selected field
+      const selectedField = existingCondition ? existingCondition.field : allFields[0].value;
+      const operators = getOperatorsForField(selectedField);
+      
+      operators.forEach(operator => {
+        const option = document.createElement('option');
+        option.value = operator.value;
+        option.textContent = operator.label;
+        if (existingCondition && existingCondition.operator === operator.value) {
+          option.selected = true;
+        }
+        operatorSelect.appendChild(option);
+      });
+      
+      operatorSelectDiv.appendChild(operatorLabel);
+      operatorSelectDiv.appendChild(operatorSelect);
+      
+      // Value input
+      const valueDiv = document.createElement('div');
+      valueDiv.className = 'flex-1';
+      
+      const valueLabel = document.createElement('label');
+      valueLabel.className = 'block text-xs font-medium text-gray-500 mb-1';
+      valueLabel.textContent = 'Value';
+      valueLabel.htmlFor = `condition_${rowIndex}_value`;
+      
+      const valueInput = document.createElement('input');
+      valueInput.type = 'text';
+      valueInput.className = 'block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm';
+      valueInput.name = `condition_${rowIndex}_value`;
+      valueInput.id = `condition_${rowIndex}_value`;
+      if (existingCondition) {
+        valueInput.value = existingCondition.value || '';
+      }
+      
+      valueDiv.appendChild(valueLabel);
+      valueDiv.appendChild(valueInput);
+      
+      // Custom field name
+      const customFieldDiv = document.createElement('div');
+      customFieldDiv.className = 'custom-field-name' + (selectedField === 'custom_field' ? '' : ' hidden');
+      
+      const customFieldLabel = document.createElement('label');
+      customFieldLabel.className = 'block text-xs font-medium text-gray-500 mb-1';
+      customFieldLabel.textContent = 'Custom Field Name';
+      customFieldLabel.htmlFor = `condition_${rowIndex}_field_name`;
+      
+      const customFieldInput = document.createElement('input');
+      customFieldInput.type = 'text';
+      customFieldInput.className = 'block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm';
+      customFieldInput.name = `condition_${rowIndex}_field_name`;
+      customFieldInput.id = `condition_${rowIndex}_field_name`;
+      if (existingCondition && existingCondition.field_name) {
+        customFieldInput.value = existingCondition.field_name;
+      }
+      
+      customFieldDiv.appendChild(customFieldLabel);
+      customFieldDiv.appendChild(customFieldInput);
+      
+      // Remove button
+      const removeButtonDiv = document.createElement('div');
+      removeButtonDiv.className = 'self-end pb-1';
+      
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.className = 'text-red-500 hover:text-red-700 focus:outline-none';
+      removeButton.innerHTML = '<i class="fas fa-trash-alt"></i>';
+      removeButton.addEventListener('click', function() {
+        conditionRow.remove();
+        updateConditionCount();
+      });
+      
+      removeButtonDiv.appendChild(removeButton);
+      
+      // Add all elements to the condition row
+      conditionRow.appendChild(fieldSelectDiv);
+      conditionRow.appendChild(operatorSelectDiv);
+      conditionRow.appendChild(valueDiv);
+      conditionRow.appendChild(customFieldDiv);
+      conditionRow.appendChild(removeButtonDiv);
+      
+      // Add event listener to field select to update operators
+      fieldSelect.addEventListener('change', function() {
+        const selectedField = this.value;
+        
+        // Show/hide custom field name input
+        if (selectedField === 'custom_field') {
+          customFieldDiv.classList.remove('hidden');
+        } else {
+          customFieldDiv.classList.add('hidden');
+        }
+        
+        // Update operators based on field type
+        const operators = getOperatorsForField(selectedField);
+        
+        // Clear current options
+        operatorSelect.innerHTML = '';
+        
+        // Add new options
+        operators.forEach(operator => {
+          const option = document.createElement('option');
+          option.value = operator.value;
+          option.textContent = operator.label;
+          operatorSelect.appendChild(option);
+        });
+      });
+      
+      // Add the condition row to the container
+      conditionsContainer.appendChild(conditionRow);
+      
+      // Increment condition count
+      conditionCount++;
+      updateConditionCount();
+    }
+    
+    function updateConditionCount() {
+      conditionCountInput.value = document.querySelectorAll('.condition-row').length;
+    }
+    
+    // Add event listener to the add condition button
+    addConditionButton.addEventListener('click', function() {
+      addConditionRow();
+    });
+    
+    // Load existing conditions
+    {% if conditions %}
+      {% for condition in conditions %}
+        addConditionRow({
+          field: "{{ condition.field }}",
+          operator: "{{ condition.operator }}",
+          value: "{{ condition.value|escapejs }}",
+          {% if condition.field_name %}field_name: "{{ condition.field_name|escapejs }}"{% endif %}
+        });
+      {% endfor %}
+    {% else %}
+      // Add the first condition row
+      addConditionRow();
+    {% endif %}
+  });
+</script>
+{% endblock %} 
