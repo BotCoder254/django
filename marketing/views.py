@@ -299,8 +299,11 @@ def dashboard(request):
     # Get recent notifications
     notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:10]
     
-    # Get recent activity
-    recent_activities = UserActivity.objects.filter(user=request.user).order_by('-timestamp')[:10]
+    # Get recent activity with pagination (3 items per page)
+    activities_list = UserActivity.objects.filter(user=request.user).order_by('-timestamp')
+    activities_paginator = Paginator(activities_list, 3)
+    activities_page_number = request.GET.get('activities_page', 1)
+    recent_activities = activities_paginator.get_page(activities_page_number)
     
     context = {
         'subscriber_count': subscriber_count,
