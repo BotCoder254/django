@@ -845,6 +845,8 @@ def send_verification_email(request, user):
     """
     Send verification email to the user
     """
+    from marketing.utils import send_email_with_settings
+    
     token = default_token_generator.make_token(user)
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     
@@ -862,14 +864,28 @@ def send_verification_email(request, user):
     html_message = render_to_string('auth/email_verification.html', context)
     text_message = render_to_string('auth/email_verification.txt', context)
     
-    # Send email with both HTML and text versions
-    send_mail(
-        subject,
-        text_message,  # Plain text version
-        settings.DEFAULT_FROM_EMAIL,
-        [user.email],
-        html_message=html_message,  # HTML version
-    )
+    # Find an admin user for sending
+    admin_user = CustomUser.objects.filter(is_superuser=True).first()
+    
+    # If there's an admin user, use their SMTP settings
+    if admin_user:
+        send_email_with_settings(
+            user=admin_user,
+            subject=subject,
+            message=text_message,
+            to_emails=user.email,
+            html_content=html_message,
+            headers={'X-Verification-Email': 'true'}
+        )
+    else:
+        # Fallback to Django's send_mail
+        send_mail(
+            subject,
+            text_message,  # Plain text version
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            html_message=html_message,  # HTML version
+        )
 
 @login_required
 def smtp_settings(request):
@@ -926,14 +942,36 @@ def test_smtp_connection(request):
         return JsonResponse({'success': False, 'message': 'Invalid request method'})
     
     try:
-        smtp_settings = SmtpSettings.objects.get(user=request.user)
+        from marketing.utils import send_email_with_settings
         
-        # Test connection
-        import smtplib
-        from email.mime.text import MIMEText
-        
-        try:
+        # Check if sending a test email is requested
+        if 'send_test' in request.POST:
+            success = send_email_with_settings(
+                user=request.user,
+                subject='EmailPro SMTP Test',
+                message='This is a test email from your EmailPro application.',
+                to_emails=request.user.email,
+                headers={'X-Test': 'true'}
+            )
+            
+            if success:
+                # Log activity
+                UserActivity.objects.create(
+                    user=request.user,
+                    action='smtp_test',
+                    description='Sent SMTP test email',
+                    metadata={'ip_address': get_client_ip(request)}
+                )
+                
+                return JsonResponse({'success': True, 'message': 'SMTP connection successful. Test email sent to your email address.'})
+            else:
+                return JsonResponse({'success': False, 'message': 'Failed to send test email. Check your SMTP settings.'})
+        else:
+            # Just test the connection without sending an email
+            smtp_settings = SmtpSettings.objects.get(user=request.user)
+            
             # Create test connection
+            import smtplib
             if smtp_settings.use_ssl:
                 server = smtplib.SMTP_SSL(smtp_settings.host, smtp_settings.port, timeout=10)
             else:
@@ -945,34 +983,21 @@ def test_smtp_connection(request):
             # Login
             server.login(smtp_settings.username, smtp_settings.password)
             
-            # Send test email if requested
-            if 'send_test' in request.POST:
-                msg = MIMEText('This is a test email from your EmailPro application.')
-                msg['Subject'] = 'EmailPro SMTP Test'
-                msg['From'] = f"{smtp_settings.from_name} <{smtp_settings.from_email}>"
-                msg['To'] = request.user.email
-                
-                server.send_message(msg)
-                
-                # Log activity
-                UserActivity.objects.create(
-                    user=request.user,
-                    action='smtp_test',
-                    description='Sent SMTP test email',
-                    ip_address=get_client_ip(request)
-                )
-                
-                success_message = 'SMTP connection successful. Test email sent to your email address.'
-            else:
-                success_message = 'SMTP connection successful.'
-            
             # Close connection
             server.quit()
             
-            return JsonResponse({'success': True, 'message': success_message})
+            return JsonResponse({'success': True, 'message': 'SMTP connection successful.'})
             
-        except Exception as e:
-            return JsonResponse({'success': False, 'message': f'Connection failed: {str(e)}'})
-        
     except SmtpSettings.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'SMTP settings not found. Please save your settings first.'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Connection failed: {str(e)}'})
+
+def get_client_ip(request):
+    """Get client IP address from request"""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip

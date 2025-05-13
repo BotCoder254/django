@@ -131,6 +131,9 @@
                                         <a href="{% url 'automation_stats' pk=automation.id %}" class="text-blue-600 hover:text-blue-900" title="View Statistics">
                                             <i class="fas fa-chart-bar"></i>
                                         </a>
+                                        <a href="{% url 'test_automation' pk=automation.id %}" class="text-purple-600 hover:text-purple-900" title="Test Automation">
+                                            <i class="fas fa-flask"></i>
+                                        </a>
                                         <a href="{% url 'edit_automation' pk=automation.id %}" class="text-indigo-600 hover:text-indigo-900" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </a>

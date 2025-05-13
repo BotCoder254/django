@@ -4,20 +4,21 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Count, Sum, Avg, F, Q
 from django.http import JsonResponse, HttpResponse
-from django.core.mail import send_mail, EmailMultiAlternatives
+from django.core.mail import send_mail, EmailMultiAlternatives, EmailMessage
 from django.template.loader import render_to_string
 from django.utils import timezone
-from django.utils.timesince import timesince
+from django.urls import reverse
 from django.conf import settings
-import csv
-import io
+from django.utils.timesince import timesince
+
 import json
-import datetime
-import os
+import uuid
 import random
 import string
-import uuid
+import datetime
 import smtplib
+import os
+from datetime import timedelta
 
 from .models import (
     Subscriber, 
@@ -44,6 +45,7 @@ from .forms import (
     ContactForm
 )
 from users.models import SmtpSettings
+from .utils import send_email_with_settings
 
 def get_client_ip(request):
     """
@@ -87,15 +89,32 @@ def contact(request):
             subject = form.cleaned_data['subject']
             message = form.cleaned_data['message']
             
-            # Send the contact email
-            email_message = f"Name: {name}\nEmail: {email}\n\n{message}"
-            send_mail(
-                f"Contact Form: {subject}",
-                email_message,
-                settings.DEFAULT_FROM_EMAIL,
-                [settings.DEFAULT_FROM_EMAIL],  # Send to admin email
-                fail_silently=False,
-            )
+            # Format message with sender info
+            formatted_message = f"Name: {name}\nEmail: {email}\n\n{message}"
+            
+            # Get first admin user as recipient
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            admin_user = User.objects.filter(is_superuser=True).first()
+            
+            if admin_user:
+                # Send the contact email using utility
+                send_email_with_settings(
+                    user=admin_user,
+                    subject=f"Contact Form: {subject}",
+                    message=formatted_message,
+                    to_emails=settings.DEFAULT_FROM_EMAIL,
+                    headers={'Reply-To': email}
+                )
+            else:
+                # Fallback to direct send_mail if no admin user exists
+                send_mail(
+                    f"Contact Form: {subject}",
+                    formatted_message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [settings.DEFAULT_FROM_EMAIL],  # Send to admin email
+                    fail_silently=False,
+                )
             
             messages.success(request, 'Your message has been sent. We will get back to you soon!')
             return redirect('contact')
@@ -144,7 +163,7 @@ def dashboard(request):
     """
     # Get date range filters if provided
     today = timezone.now().date()
-    default_start_date = today - datetime.timedelta(days=30)
+    default_start_date = today - timedelta(days=30)
     
     start_date = request.GET.get('start_date', default_start_date.isoformat())
     end_date = request.GET.get('end_date', today.isoformat())
@@ -162,8 +181,8 @@ def dashboard(request):
     
     # Previous period for growth calculation
     period_days = (end_date - start_date).days
-    prev_start_date = start_date - datetime.timedelta(days=period_days)
-    prev_end_date = start_date - datetime.timedelta(days=1)
+    prev_start_date = start_date - timedelta(days=period_days)
+    prev_end_date = start_date - timedelta(days=1)
     
     # Create timezone-aware datetime objects for prev period
     prev_start_datetime = timezone.make_aware(datetime.datetime.combine(prev_start_date, datetime.time.min))
@@ -301,7 +320,7 @@ def dashboard(request):
         open_rates.append(round(day_open_rate, 1))
         click_rates.append(round(day_click_rate, 1))
         
-        current_date += datetime.timedelta(days=step)
+        current_date += timedelta(days=step)
     
     # Convert chart data to JSON for JavaScript
     chart_dates_json = json.dumps(chart_dates)
@@ -933,15 +952,16 @@ def schedule_campaign(request, pk):
             campaign.save()
             
             # Create notification
-            Notification.create_notification(
+            Notification.objects.create(
                 user=request.user,
                 message=f"Campaign scheduled: {campaign.name}",
                 notification_type='campaign_scheduled',
-                related_object=campaign
+                related_object_id=campaign.id,
+                related_object_type='campaign'
             )
             
             # Log activity
-            UserActivity.log_activity(
+            UserActivity.objects.create(
                 user=request.user,
                 action='campaign_scheduled',
                 description=f"Scheduled campaign: {campaign.name} for {campaign.schedule_time}",
@@ -964,111 +984,86 @@ def schedule_campaign(request, pk):
 @login_required
 def send_campaign(request, pk):
     """
-    Send a campaign immediately
+    Send campaign to all subscribers in the selected lists
     """
     campaign = get_object_or_404(Campaign, pk=pk, owner=request.user)
     
-    # Check if campaign can be sent
-    if campaign.status not in ['draft', 'scheduled']:
-        messages.error(request, 'This campaign cannot be sent right now.')
+    if campaign.status in ['sent', 'sending']:
+        messages.error(request, "This campaign has already been sent or is currently sending.")
         return redirect('campaign_detail', pk=campaign.pk)
     
-    if request.method == 'POST':
-        # Check user quota
-        user_quota = request.user.usage_quota
+    # Set campaign as sending
+    campaign.status = 'sending'
+    campaign.save()
+    
+    # Log activity
+    UserActivity.objects.create(
+        user=request.user,
+        action='campaign_sent',
+        description=f'Campaign "{campaign.name}" sent',
+        metadata={'campaign_id': campaign.pk}
+    )
+    
+    try:
+        # Get all subscribers from all lists
+        all_subscribers = set()
+        for email_list in campaign.lists.all():
+            subscribers = email_list.subscribers.filter(is_active=True)
+            all_subscribers.update(subscribers)
         
-        # Count subscribers for this campaign
-        subscriber_count = 0
-        for subscriber_list in campaign.lists.all():
-            subscriber_count += subscriber_list.subscribers.filter(is_active=True).count()
-        
-        # Check if within quota
-        if subscriber_count > user_quota:
-            messages.error(
-                request, 
-                f'You do not have enough quota to send this campaign. Needed: {subscriber_count}, Available: {user_quota}'
-            )
-            
-            # Create notification for quota exceeded
-            Notification.create_notification(
-                user=request.user,
-                message=f"Sending failed: Quota exceeded for campaign '{campaign.name}'",
-                notification_type='campaign_error',
-                related_object=campaign
-            )
-            
-            return redirect('campaign_detail', pk=campaign.pk)
+        # Send emails to each subscriber
+        sent_count = 0
+        for subscriber in all_subscribers:
+            try:
+                # Personalize content
+                html_content = campaign.html_content
+                text_content = campaign.content
+                
+                # Replace personalization tags
+                for field in ['email', 'first_name', 'last_name']:
+                    value = getattr(subscriber, field, '')
+                    html_content = html_content.replace('{{' + field + '}}', value)
+                    text_content = text_content.replace('{{' + field + '}}', value)
+                
+                # Send email using utility function
+                success = send_email_with_settings(
+                    user=request.user,
+                    subject=campaign.subject,
+                    message=text_content,
+                    to_emails=subscriber.email,
+                    html_content=html_content,
+                    reply_to=campaign.reply_to,
+                    from_name=campaign.from_name,
+                    from_email=campaign.from_email
+                )
+                
+                if success:
+                    sent_count += 1
+                    
+                    # Create email event
+                    EmailEvent.objects.create(
+                        campaign=campaign,
+                        subscriber=subscriber,
+                        event_type='sent',
+                        metadata={'subscriber_id': subscriber.id, 'campaign_id': campaign.id}
+                    )
+            except Exception as e:
+                # Log error
+                print(f"Error sending to {subscriber.email}: {str(e)}")
+                continue
         
         # Update campaign status
-        campaign.status = 'sending'
+        campaign.status = 'sent'
         campaign.sent_time = timezone.now()
         campaign.save()
         
-        # In a real application, we would queue this for async processing
-        # Here we'll just simulate it
-        
-        # Get all active subscribers from selected lists
-        subscribers = set()
-        for subscriber_list in campaign.lists.all():
-            for subscriber in subscriber_list.subscribers.filter(is_active=True):
-                subscribers.add(subscriber)
-        
-        # Update analytics
-        analytics, created = CampaignAnalytics.objects.get_or_create(campaign=campaign)
-        analytics.sent_count = len(subscribers)
-        analytics.delivered_count = len(subscribers)  # Assuming all are delivered for simplicity
-        analytics.save()
-        
-        # In real world, we would send emails asynchrously
-        # Here we'll just create the events
-        for subscriber in subscribers:
-            EmailEvent.objects.create(
-                campaign=campaign,
-                subscriber=subscriber,
-                event_type='sent'
-            )
-            
-            EmailEvent.objects.create(
-                campaign=campaign,
-                subscriber=subscriber,
-                event_type='delivered'
-            )
-        
-        # Mark campaign as sent
-        campaign.status = 'sent'
+        messages.success(request, f"Campaign sent successfully to {sent_count} subscribers.")
+    except Exception as e:
+        campaign.status = 'draft'
         campaign.save()
-        
-        # Create notification
-        Notification.create_notification(
-            user=request.user,
-            message=f"Campaign sent: {campaign.name} to {len(subscribers)} subscribers",
-            notification_type='campaign_sent',
-            related_object=campaign
-        )
-        
-        # Log activity
-        UserActivity.log_activity(
-            user=request.user,
-            action='campaign_sent',
-            description=f"Sent campaign: {campaign.name} to {len(subscribers)} subscribers",
-            metadata={
-                'campaign_id': campaign.id,
-                'subscriber_count': len(subscribers)
-            }
-        )
-        
-        messages.success(request, f'Campaign sent to {len(subscribers)} subscribers.')
-        return redirect('campaign_detail', pk=campaign.pk)
+        messages.error(request, f"Failed to send campaign: {str(e)}")
     
-    # Get count of subscribers
-    subscribers_count = 0
-    for subscriber_list in campaign.lists.all():
-        subscribers_count += subscriber_list.subscribers.filter(is_active=True).count()
-    
-    return render(request, 'marketing/send_campaign.html', {
-        'campaign': campaign,
-        'subscribers_count': subscribers_count
-    })
+    return redirect('campaign_detail', pk=campaign.pk)
 
 @login_required
 def campaign_analytics(request, pk):
@@ -1181,7 +1176,7 @@ def get_notifications(request):
         'notification_type': notification.notification_type,
         'is_read': notification.is_read,
         'created_at': notification.created_at.isoformat(),
-        'time_ago': timesince(notification.created_at)
+        'time_ago': str((timezone.now() - notification.created_at).days) + " days ago"
     } for notification in notifications]
     
     return JsonResponse({
@@ -2045,7 +2040,7 @@ def automation_stats(request, pk):
         random_days = random.randint(0, 7)
         random_hours = random.randint(0, 23)
         random_minutes = random.randint(0, 59)
-        timestamp = timezone.now() - datetime.timedelta(days=random_days, hours=random_hours, minutes=random_minutes)
+        timestamp = timezone.now() - timedelta(days=random_days, hours=random_hours, minutes=random_minutes)
         
         recent_activity.append({
             'type': activity_type,
@@ -2085,101 +2080,138 @@ def automation_stats(request, pk):
 
 @login_required
 def test_automation(request, pk):
-    """
-    Test an automation workflow with simulated results
-    """
     automation = get_object_or_404(Automation, pk=pk, owner=request.user)
-    steps = automation.steps.all().order_by('position')
-    
-    context = {
-        'automation': automation,
-        'steps': steps,
-    }
     
     if request.method == 'POST':
-        test_email = request.POST.get('test_email')
+        email = request.POST.get('test_email')
         
-        if not test_email:
-            messages.error(request, 'Please provide an email address for testing.')
-            return redirect('test_automation', pk=automation.id)
+        if not email:
+            messages.error(request, "Please provide a test email address.")
+            return redirect('test_automation', pk=automation.pk)
         
-        # Generate test results
-        test_results = []
-        
-        # Start with trigger event
-        trigger_time = timezone.now()
-        
-        test_results.append({
-            'type': 'trigger',
-            'title': f"Automation Triggered: {automation.get_trigger_type_display()}",
-            'description': f"Subscriber {test_email} entered the automation sequence.",
-            'time': trigger_time.strftime("%b %d, %Y at %H:%M")
-        })
-        
-        # Add each step
-        current_time = trigger_time
-        
-        for step in steps:
-            if step.step_type == 'wait':
-                wait_days = step.config.get('days', 1)
-                
-                current_time += datetime.timedelta(days=wait_days)
-                
-                test_results.append({
-                    'type': 'wait',
-                    'title': f"Wait Period: {wait_days} day(s)",
-                    'description': f"System waited {wait_days} day(s) before proceeding to the next step.",
-                    'time': current_time.strftime("%b %d, %Y at %H:%M")
-                })
-                
-            elif step.step_type == 'email':
-                subject = step.config.get('subject', '(No subject)')
-                content = step.config.get('content', '(No content)')
-                
-                test_results.append({
-                    'type': 'email',
-                    'title': f"Email Sent: {step.name}",
-                    'description': f"Email sent to {test_email}",
-                    'time': current_time.strftime("%b %d, %Y at %H:%M"),
-                    'subject': subject,
-                    'content': content
-                })
-                
-                # Simulate open and click events
-                if random.random() > 0.3:  # 70% chance of opening
-                    open_time = current_time + datetime.timedelta(hours=random.randint(1, 24))
+        try:
+            # Get all steps in the automation
+            steps = automation.steps.all().order_by('position')
+            steps_count = steps.count()
+            email_steps_count = 0
+            
+            # Send a test email for each step
+            for step in steps:
+                if step.step_type == 'email':
+                    email_steps_count += 1
+                    # Get step details from config
+                    config = step.config
+                    subject = config.get('subject', f'Step {step.position} - {automation.name}')
+                    content = config.get('content', '')
                     
-                    test_results.append({
-                        'type': 'email',
-                        'title': f"Email Opened",
-                        'description': f"Subscriber {test_email} opened the email",
-                        'time': open_time.strftime("%b %d, %Y at %H:%M")
-                    })
+                    # Replace personalization tags with sample data
+                    sample_data = {
+                        'email': email,
+                        'first_name': 'Test',
+                        'last_name': 'User',
+                    }
                     
-                    if random.random() > 0.5:  # 50% chance of clicking if opened
-                        click_time = open_time + datetime.timedelta(minutes=random.randint(1, 30))
-                        
-                        test_results.append({
-                            'type': 'email',
-                            'title': f"Link Clicked",
-                            'description': f"Subscriber {test_email} clicked a link in the email",
-                            'time': click_time.strftime("%b %d, %Y at %H:%M")
-                        })
+                    for field, value in sample_data.items():
+                        content = content.replace('{{' + field + '}}', value)
+                    
+                    # Add test prefix to subject
+                    test_subject = f"[TEST] {subject}"
+                    
+                    # Send email using utility function
+                    success = send_email_with_settings(
+                        user=request.user,
+                        subject=test_subject,
+                        message=content,
+                        to_emails=email,
+                        html_content=content,  # Use same content as HTML
+                        headers={'X-Test-Email': 'true', 'X-Automation-Step': str(step.position)}
+                    )
+                    
+                    if not success:
+                        messages.warning(request, f"Failed to send test email for step {step.position}. Check your email settings.")
+            
+            # Log activity
+            UserActivity.objects.create(
+                user=request.user,
+                action='automation_tested',
+                description=f'Test emails sent for automation "{automation.name}"',
+                metadata={'automation_id': automation.pk, 'test_email': email}
+            )
+            
+            messages.success(request, f"Test emails for all {email_steps_count} email steps sent successfully to {email}.")
+        except Exception as e:
+            messages.error(request, f"Failed to send test emails: {str(e)}")
         
-        context.update({
-            'test_results': test_results,
-            'test_email': test_email
-        })
-        
-        # Log activity
-        UserActivity.log_activity(
-            user=request.user,
-            action='other',
-            description=f"Tested automation: {automation.name}",
-            metadata={'automation_id': automation.id, 'test_email': test_email}
-        )
+        return redirect('automation_stats', pk=automation.pk)
     
-    return render(request, 'marketing/automation_test.html', context)
+    return render(request, 'marketing/test_automation.html', {
+        'automation': automation
+    })
+
+@login_required
+def test_campaign(request, pk):
+    campaign = get_object_or_404(Campaign, pk=pk, owner=request.user)
+    
+    if request.method == 'POST':
+        email = request.POST.get('test_email')
+        
+        if not email:
+            messages.error(request, "Please provide a test email address.")
+            return redirect('test_campaign', pk=campaign.pk)
+        
+        try:
+            # Personalize content
+            html_content = campaign.html_content
+            text_content = campaign.content
+            
+            # Replace personalization tags with sample data
+            sample_data = {
+                'email': email,
+                'first_name': 'Test',
+                'last_name': 'User',
+            }
+            
+            for field, value in sample_data.items():
+                html_content = html_content.replace('{{' + field + '}}', value)
+                text_content = text_content.replace('{{' + field + '}}', value)
+            
+            # Add test prefix to subject
+            test_subject = f"[TEST] {campaign.subject}"
+            
+            # Send email using utility function
+            success = send_email_with_settings(
+                user=request.user,
+                subject=test_subject,
+                message=text_content,
+                to_emails=email,
+                html_content=html_content,
+                reply_to=campaign.reply_to,
+                from_name=campaign.from_name,
+                from_email=campaign.from_email,
+                headers={'X-Test-Email': 'true'}
+            )
+            
+            if success:
+                # Log activity
+                UserActivity.objects.create(
+                    user=request.user,
+                    action='campaign_tested',
+                    description=f'Test email sent for campaign "{campaign.name}"',
+                    metadata={'campaign_id': campaign.pk, 'test_email': email}
+                )
+                
+                messages.success(request, f"Test email sent successfully to {email}.")
+            else:
+                messages.error(request, "Failed to send test email. Check your email settings.")
+                
+        except Exception as e:
+            messages.error(request, f"Failed to send test email: {str(e)}")
+        
+        return redirect('campaign_detail', pk=campaign.pk)
+    
+    return render(request, 'marketing/test_campaign.html', {
+        'campaign': campaign
+    })
 
 @login_required
 def create_automation_from_template(request, template):
@@ -2452,7 +2484,7 @@ def create_automation_from_template(request, template):
         )
     
     # Log activity
-    UserActivity.log_activity(
+    UserActivity.objects.create(
         user=request.user,
         action='other',
         description=f"Created automation from template: {template_config['name']}",
@@ -2460,77 +2492,4 @@ def create_automation_from_template(request, template):
     )
     
     messages.success(request, f'Automation created successfully from the {template_config["name"]} template.')
-    return redirect('edit_automation', pk=automation.id) 
-
-@login_required
-def test_campaign(request, pk):
-    """
-    Test a campaign by sending a test email
-    """
-    campaign = get_object_or_404(Campaign, pk=pk, owner=request.user)
-    
-    if request.method == 'POST':
-        test_email = request.POST.get('test_email')
-        
-        if not test_email:
-            messages.error(request, 'Please provide an email address for testing.')
-            return redirect('test_campaign', pk=campaign.pk)
-        
-        # Check if SMTP settings are configured
-        try:
-            smtp_settings = SmtpSettings.objects.get(user=request.user)
-            
-            # Test connection and send email
-            try:
-                # Create test email
-                from email.mime.text import MIMEText
-                from email.mime.multipart import MIMEMultipart
-                
-                msg = MIMEMultipart('alternative')
-                msg['Subject'] = campaign.subject
-                msg['From'] = f"{smtp_settings.from_name} <{smtp_settings.from_email}>"
-                msg['To'] = test_email
-                
-                # Attach plain text and HTML versions
-                text_part = MIMEText(campaign.content, 'plain')
-                msg.attach(text_part)
-                
-                if campaign.html_content:
-                    html_part = MIMEText(campaign.html_content, 'html')
-                    msg.attach(html_part)
-                
-                # Connect to SMTP server
-                if smtp_settings.use_ssl:
-                    server = smtplib.SMTP_SSL(smtp_settings.host, smtp_settings.port, timeout=10)
-                else:
-                    server = smtplib.SMTP(smtp_settings.host, smtp_settings.port, timeout=10)
-                    
-                    if smtp_settings.use_tls:
-                        server.starttls()
-                
-                # Login and send
-                server.login(smtp_settings.username, smtp_settings.password)
-                server.send_message(msg)
-                server.quit()
-                
-                # Log activity
-                UserActivity.log_activity(
-                    user=request.user,
-                    action='campaign_tested',
-                    description=f"Tested campaign: {campaign.name}",
-                    metadata={
-                        'campaign_id': campaign.id,
-                        'test_email': test_email
-                    }
-                )
-                
-                messages.success(request, f'Test email sent to {test_email} successfully.')
-                
-            except Exception as e:
-                messages.error(request, f'Failed to send test email: {str(e)}')
-        
-        except SmtpSettings.DoesNotExist:
-            messages.error(request, 'SMTP settings not found. Please configure your SMTP settings first.')
-            return redirect('smtp_settings')
-    
-    return render(request, 'marketing/test_campaign.html', {'campaign': campaign})
+    return redirect('edit_automation', pk=automation.id)

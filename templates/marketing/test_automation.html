@@ -1,21 +1,21 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Test Campaign{% endblock %}
+{% block title %}Test Automation{% endblock %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="md:flex md:items-center md:justify-between mb-6">
         <div class="flex-1 min-w-0">
             <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
-                Test Campaign: {{ campaign.name }}
+                Test Automation: {{ automation.name }}
             </h2>
             <p class="mt-1 text-sm text-gray-500">
-                Send a test version of this campaign to any email address.
+                Send a test version of this automation to any email address.
             </p>
         </div>
         <div class="mt-4 flex md:mt-0 md:ml-4">
-            <a href="{% url 'campaign_detail' pk=campaign.pk %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            <a href="{% url 'automation_stats' pk=automation.pk %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                 <i class="fas fa-arrow-left mr-2"></i> Back
             </a>
         </div>
@@ -23,7 +23,7 @@
 
     <div class="bg-white shadow overflow-hidden sm:rounded-lg">
         <div class="px-4 py-5 sm:p-6">
-            <form method="post" action="{% url 'test_campaign' pk=campaign.pk %}">
+            <form method="post" action="{% url 'test_automation' pk=automation.pk %}">
                 {% csrf_token %}
                 <div class="max-w-lg">
                     <label for="test_email" class="block text-sm font-medium text-gray-700">
@@ -35,7 +35,7 @@
                             placeholder="your@email.com" required>
                     </div>
                     <p class="mt-2 text-sm text-gray-500">
-                        Enter an email address where you want to receive the test campaign.
+                        This address will receive test emails for all steps in this automation.
                     </p>
                 </div>
 
@@ -47,14 +47,14 @@
                             </div>
                             <div class="ml-3">
                                 <h3 class="text-sm font-medium text-blue-800">
-                                    About test campaigns
+                                    What happens when you test?
                                 </h3>
                                 <div class="mt-2 text-sm text-blue-700">
                                     <ul class="list-disc pl-5 space-y-1">
-                                        <li>The test email will have "[TEST]" added to the subject line</li>
+                                        <li>You'll receive a test email for each step in the automation</li>
+                                        <li>Each email will be clearly marked as a test</li>
                                         <li>Personalization tags will be replaced with sample data</li>
-                                        <li>No statistics will be recorded for test sends</li>
-                                        <li>You can send as many test emails as needed</li>
+                                        <li>No wait periods will be applied - all emails will be sent immediately</li>
                                     </ul>
                                 </div>
                             </div>
@@ -64,7 +64,7 @@
 
                 <div class="mt-6">
                     <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        <i class="fas fa-flask mr-2"></i> Send Test Email
+                        <i class="fas fa-flask mr-2"></i> Send Test Emails
                     </button>
                 </div>
             </form>
