@@ -62,13 +62,28 @@
             </a>
             
             <nav class="hidden md:flex space-x-8">
-                <a href="{% url 'features' %}" class="text-gray-600 hover:text-indigo-600 transition-colors">Features</a>
-                <a href="{% url 'pricing' %}" class="text-gray-600 hover:text-indigo-600 transition-colors">Pricing</a>
-                <a href="{% url 'contact' %}" class="text-gray-600 hover:text-indigo-600 transition-colors">Contact</a>
+                <a href="{% url 'features' %}" class="flex items-center text-gray-600 hover:text-indigo-600 transition-colors">
+                    <i class="fas fa-star mr-2"></i>
+                    <span>Features</span>
+                </a>
+                <a href="{% url 'pricing' %}" class="flex items-center text-gray-600 hover:text-indigo-600 transition-colors">
+                    <i class="fas fa-tag mr-2"></i>
+                    <span>Pricing</span>
+                </a>
+                <a href="{% url 'contact' %}" class="flex items-center text-gray-600 hover:text-indigo-600 transition-colors">
+                    <i class="fas fa-envelope mr-2"></i>
+                    <span>Contact</span>
+                </a>
                 
                 {% if user.is_authenticated %}
-                    <a href="{% url 'dashboard' %}" class="text-gray-600 hover:text-indigo-600 transition-colors">Dashboard</a>
-                    <a href="{% url 'ab_testing' %}" class="text-gray-600 hover:text-indigo-600 transition-colors">A/B Testing</a>
+                    <a href="{% url 'dashboard' %}" class="flex items-center text-gray-600 hover:text-indigo-600 transition-colors">
+                        <i class="fas fa-chart-line mr-2"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="{% url 'ab_testing' %}" class="flex items-center text-gray-600 hover:text-indigo-600 transition-colors">
+                        <i class="fas fa-flask mr-2"></i>
+                        <span>A/B Testing</span>
+                    </a>
                 {% endif %}
             </nav>
             
@@ -121,20 +136,33 @@
                     </div>
                     
                     <div class="relative group">
-                        <button class="flex items-center space-x-1 text-gray-700 hover:text-indigo-600">
+                        <button class="flex items-center space-x-2 text-gray-700 hover:text-indigo-600 bg-gray-100 px-3 py-2 rounded-md">
+                            <i class="fas fa-user-circle"></i>
                             <span>{{ user.email }}</span>
                             <i class="fas fa-chevron-down text-xs"></i>
                         </button>
                         <div class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 hidden group-hover:block">
-                            <a href="{% url 'profile' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50">Profile</a>
-                            <a href="{% url 'subscription' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50">Subscription</a>
+                            <a href="{% url 'profile' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50">
+                                <i class="fas fa-user mr-2"></i> Profile
+                            </a>
+                            <a href="{% url 'subscription' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50">
+                                <i class="fas fa-credit-card mr-2"></i> Subscription
+                            </a>
                             <div class="border-t border-gray-200"></div>
-                            <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50">Logout</a>
+                            <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50">
+                                <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                            </a>
                         </div>
                     </div>
                 {% else %}
-                    <a href="{% url 'login' %}" class="px-4 py-2 text-indigo-600 hover:text-indigo-800 transition-colors">Login</a>
-                    <a href="{% url 'register' %}" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors">Sign Up</a>
+                    <a href="{% url 'login' %}" class="flex items-center px-4 py-2 text-indigo-600 hover:text-indigo-800 transition-colors">
+                        <i class="fas fa-sign-in-alt mr-2"></i>
+                        <span>Login</span>
+                    </a>
+                    <a href="{% url 'register' %}" class="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors">
+                        <i class="fas fa-user-plus mr-2"></i>
+                        <span>Sign Up</span>
+                    </a>
                 {% endif %}
                 
                 <!-- Mobile menu button -->
@@ -147,16 +175,32 @@
         <!-- Mobile menu (hidden by default) -->
         <div class="md:hidden hidden bg-white border-t border-gray-100" id="mobile-menu">
             <div class="px-2 pt-2 pb-3 space-y-1">
-                <a href="{% url 'features' %}" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">Features</a>
-                <a href="{% url 'pricing' %}" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">Pricing</a>
-                <a href="{% url 'contact' %}" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">Contact</a>
+                <a href="{% url 'features' %}" class="flex items-center px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">
+                    <i class="fas fa-star mr-2"></i> Features
+                </a>
+                <a href="{% url 'pricing' %}" class="flex items-center px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">
+                    <i class="fas fa-tag mr-2"></i> Pricing
+                </a>
+                <a href="{% url 'contact' %}" class="flex items-center px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">
+                    <i class="fas fa-envelope mr-2"></i> Contact
+                </a>
                 
                 {% if user.is_authenticated %}
-                    <a href="{% url 'dashboard' %}" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">Dashboard</a>
-                    <a href="{% url 'ab_testing' %}" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">A/B Testing</a>
-                    <a href="{% url 'profile' %}" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">Profile</a>
-                    <a href="{% url 'subscription' %}" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">Subscription</a>
-                    <a href="{% url 'logout' %}" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">Logout</a>
+                    <a href="{% url 'dashboard' %}" class="flex items-center px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">
+                        <i class="fas fa-chart-line mr-2"></i> Dashboard
+                    </a>
+                    <a href="{% url 'ab_testing' %}" class="flex items-center px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">
+                        <i class="fas fa-flask mr-2"></i> A/B Testing
+                    </a>
+                    <a href="{% url 'profile' %}" class="flex items-center px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">
+                        <i class="fas fa-user mr-2"></i> Profile
+                    </a>
+                    <a href="{% url 'subscription' %}" class="flex items-center px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">
+                        <i class="fas fa-credit-card mr-2"></i> Subscription
+                    </a>
+                    <a href="{% url 'logout' %}" class="flex items-center px-3 py-2 text-base font-medium text-gray-600 hover:text-indigo-600">
+                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                    </a>
                 {% endif %}
             </div>
         </div>

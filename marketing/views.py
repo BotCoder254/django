@@ -636,6 +636,9 @@ def subscriber_list_detail(request, pk):
     subscriber_list = get_object_or_404(SubscriberList, pk=pk, owner=request.user)
     subscribers = subscriber_list.subscribers.all()
     
+    # Get active subscribers count
+    active_subscribers = subscriber_list.subscribers.filter(is_active=True).count()
+    
     # Pagination
     paginator = Paginator(subscribers, 25)
     page_number = request.GET.get('page')
@@ -643,7 +646,9 @@ def subscriber_list_detail(request, pk):
     
     return render(request, 'marketing/subscriber_list_detail.html', {
         'list': subscriber_list,
-        'page_obj': page_obj
+        'page_obj': page_obj,
+        'subscribers': subscribers,
+        'active_subscribers': active_subscribers
     })
 
 @login_required
@@ -652,6 +657,9 @@ def edit_subscriber_list(request, pk):
     Edit a subscriber list
     """
     subscriber_list = get_object_or_404(SubscriberList, pk=pk, owner=request.user)
+    
+    # Get count of active subscribers
+    active_subscribers = subscriber_list.subscribers.filter(is_active=True).count()
     
     if request.method == 'POST':
         form = SubscriberListForm(request.POST, instance=subscriber_list)
@@ -664,7 +672,8 @@ def edit_subscriber_list(request, pk):
     
     return render(request, 'marketing/edit_subscriber_list.html', {
         'form': form,
-        'list': subscriber_list
+        'list': subscriber_list,
+        'active_subscribers': active_subscribers
     })
 
 @login_required
