@@ -61,6 +61,40 @@
         padding: 0.25rem 0.75rem;
         border-radius: 9999px;
     }
+    .payment-processing-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+    .payment-processing-content {
+        background-color: white;
+        padding: 2rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        max-width: 500px;
+        width: 100%;
+        text-align: center;
+    }
+    .spinner {
+        border: 4px solid rgba(0, 0, 0, 0.1);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border-left-color: #4f46e5;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1rem;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
 </style>
 {% endblock %}
 
@@ -104,7 +138,7 @@
                     </ul>
                 </div>
                 <div class="plan-footer">
-                    <form method="post">
+                    <form method="post" class="plan-form">
                         {% csrf_token %}
                         <input type="hidden" name="plan" value="basic">
                         <button type="submit" class="w-full px-4 py-2 border {% if user.subscription_plan == 'basic' %}border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed{% else %}border-transparent bg-indigo-600 hover:bg-indigo-700 text-white{% endif %} rounded-md shadow-sm text-sm font-medium" {% if user.subscription_plan == 'basic' %}disabled{% endif %}>
@@ -138,7 +172,7 @@
                     </ul>
                 </div>
                 <div class="plan-footer">
-                    <form method="post">
+                    <form method="post" class="plan-form">
                         {% csrf_token %}
                         <input type="hidden" name="plan" value="premium">
                         <button type="submit" class="w-full px-4 py-2 border {% if user.subscription_plan == 'premium' %}border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed{% else %}border-transparent bg-indigo-600 hover:bg-indigo-700 text-white{% endif %} rounded-md shadow-sm text-sm font-medium" {% if user.subscription_plan == 'premium' %}disabled{% endif %}>
@@ -171,7 +205,7 @@
                     </ul>
                 </div>
                 <div class="plan-footer">
-                    <form method="post">
+                    <form method="post" class="plan-form">
                         {% csrf_token %}
                         <input type="hidden" name="plan" value="enterprise">
                         <button type="submit" class="w-full px-4 py-2 border {% if user.subscription_plan == 'enterprise' %}border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed{% else %}border-transparent bg-indigo-600 hover:bg-indigo-700 text-white{% endif %} rounded-md shadow-sm text-sm font-medium" {% if user.subscription_plan == 'enterprise' %}disabled{% endif %}>
@@ -210,4 +244,81 @@
         </div>
     </div>
 </div>
+
+<!-- Payment Processing Overlay -->
+<div id="payment-overlay" class="payment-processing-overlay hidden">
+    <div class="payment-processing-content">
+        <div class="spinner"></div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">Processing Payment</h3>
+        <p class="text-gray-600">Please wait while we redirect you to our secure payment page...</p>
+    </div>
+</div>
 {% endblock %} 
+
+{% block extra_js %}
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Stripe
+        const stripe = Stripe('{{ stripe_public_key }}');
+        const paymentOverlay = document.getElementById('payment-overlay');
+        const planForms = document.querySelectorAll('.plan-form');
+        
+        // Add event listeners to all plan forms
+        planForms.forEach(form => {
+            form.addEventListener('submit', async function(event) {
+                // Prevent default form submission
+                event.preventDefault();
+                
+                // Get the button and disable it
+                const button = form.querySelector('button[type="submit"]');
+                if (button.disabled) return;
+                
+                // Set button to loading state
+                const originalText = button.textContent;
+                button.disabled = true;
+                button.textContent = 'Processing...';
+                
+                try {
+                    // Show the payment processing overlay
+                    paymentOverlay.classList.remove('hidden');
+                    
+                    // Get form data
+                    const formData = new FormData(form);
+                    
+                    // Send form data to server
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                        }
+                    });
+                    
+                    // Parse the response
+                    const result = await response.json();
+                    
+                    // Check if there's a redirect URL
+                    if (result.redirect_url) {
+                        // Redirect to Stripe checkout
+                        window.location.href = result.redirect_url;
+                    } else {
+                        // If there's an error, display it
+                        alert(result.error || 'An error occurred. Please try again.');
+                        paymentOverlay.classList.add('hidden');
+                        button.disabled = false;
+                        button.textContent = originalText;
+                    }
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('An error occurred while processing your request. Please try again.');
+                    paymentOverlay.classList.add('hidden');
+                    button.disabled = false;
+                    button.textContent = originalText;
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

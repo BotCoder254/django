@@ -56,113 +56,279 @@
 {% endblock %}
 
 {% block content %}
-<div class="container max-w-7xl mx-auto">
-    <div class="flex justify-between items-center mb-6">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-800">Subscription</h1>
-            <p class="text-sm text-gray-500 mt-1">Manage your subscription plan</p>
-        </div>
-    </div>
-
-    <!-- Current Plan -->
-    <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
-        <div class="px-4 py-5 sm:px-6">
-            <h2 class="text-lg font-medium text-gray-900">Current Plan</h2>
-            <p class="mt-1 text-sm text-gray-500">Details about your current subscription</p>
-        </div>
-        <div class="border-t border-gray-200 px-4 py-5 sm:p-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <h3 class="text-lg font-medium text-indigo-600 mb-2">{{ user.subscription_plan|title }}</h3>
-                    <p class="text-gray-600 mb-4">Your plan renews on {{ user.subscription_renewal|date:"F j, Y" }}</p>
-                    
-                    <div class="mb-6">
-                        <div class="flex justify-between text-sm text-gray-500 mb-1">
-                            <span>Monthly usage:</span>
-                            <span>{{ user.usage_count|default:0 }} / {{ user.usage_quota|default:0 }}</span>
-                        </div>
-                        <div class="usage-bar">
-                            <div class="usage-value" style="width: {% widthratio user.usage_count|default:0 user.usage_quota|default:100 100 %}%"></div>
-                        </div>
-                    </div>
-                    
-                    <a href="{% url 'upgrade_subscription' %}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
-                        Upgrade Plan
-                    </a>
-                </div>
+<div class="container mx-auto px-4 py-8">
+    <div class="flex flex-col md:flex-row">
+        <div class="w-full md:w-2/3 pr-0 md:pr-8">
+            <!-- Current Plan Section -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Your Current Plan</h2>
                 
-                <div class="border-t md:border-t-0 md:border-l border-gray-200 md:pl-6 pt-6 md:pt-0">
-                    <h4 class="font-medium text-gray-900 mb-3">Plan Features</h4>
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <span class="block text-sm text-gray-600 mb-1">Current Plan</span>
+                        <span class="text-xl font-bold text-indigo-600">{{ user.get_subscription_plan_display }}</span>
+                    </div>
+                    {% if subscription %}
+                        <div>
+                            <span class="block text-sm text-gray-600 mb-1">Renewal Date</span>
+                            <span class="text-lg font-semibold">{{ subscription_renewal|date:"F j, Y" }}</span>
+                        </div>
+                    {% endif %}
+                    <div>
+                        <a href="{% url 'upgrade_subscription' %}" class="bg-indigo-500 hover:bg-indigo-600 text-white py-2 px-4 rounded-md transition duration-300 ease-in-out">
+                            {% if user.subscription_plan == 'free' %}
+                                Upgrade Plan
+                            {% else %}
+                                Change Plan
+                            {% endif %}
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Usage Information -->
+                <div class="mb-6">
+                    <div class="flex justify-between mb-2">
+                        <span class="text-sm font-medium text-gray-700">Email Usage ({{ user.usage_count }} / {{ user.usage_quota }})</span>
+                        <span class="text-sm font-medium text-gray-700">{{ usage_percentage }}%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div class="h-2.5 rounded-full {% if usage_percentage > 90 %}bg-red-500{% elif usage_percentage > 75 %}bg-yellow-500{% else %}bg-green-500{% endif %}" style="width: {{ usage_percentage }}%"></div>
+                    </div>
+                </div>
+
+                <!-- Plan Features -->
+                <div class="border-t border-gray-200 pt-4">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-3">Plan Features</h3>
                     <ul class="space-y-2">
-                        {% if user.subscription_plan == 'basic' %}
-                            <li class="feature-item"><i class="fas fa-check feature-icon"></i> 5,000 emails per month</li>
-                            <li class="feature-item"><i class="fas fa-check feature-icon"></i> Basic email templates</li>
-                            <li class="feature-item"><i class="fas fa-check feature-icon"></i> Basic analytics</li>
-                            <li class="feature-item"><i class="fas fa-check feature-icon"></i> Email support</li>
-                        {% elif user.subscription_plan == 'premium' %}
-                            <li class="feature-item"><i class="fas fa-check feature-icon"></i> 20,000 emails per month</li>
-                            <li class="feature-item"><i class="fas fa-check feature-icon"></i> Advanced email templates</li>
-                            <li class="feature-item"><i class="fas fa-check feature-icon"></i> Detailed analytics</li>
-                            <li class="feature-item"><i class="fas fa-check feature-icon"></i> Priority email support</li>
-                            <li class="feature-item"><i class="fas fa-check feature-icon"></i> A/B testing</li>
-                        {% elif user.subscription_plan == 'enterprise' %}
-                            <li class="feature-item"><i class="fas fa-check feature-icon"></i> 100,000 emails per month</li>
-                            <li class="feature-item"><i class="fas fa-check feature-icon"></i> Premium email templates</li>
-                            <li class="feature-item"><i class="fas fa-check feature-icon"></i> Advanced analytics & reporting</li>
-                            <li class="feature-item"><i class="fas fa-check feature-icon"></i> 24/7 priority support</li>
-                            <li class="feature-item"><i class="fas fa-check feature-icon"></i> Advanced A/B testing</li>
-                            <li class="feature-item"><i class="fas fa-check feature-icon"></i> Dedicated account manager</li>
-                        {% else %}
-                            <li class="feature-item"><i class="fas fa-check feature-icon"></i> Limited features</li>
-                        {% endif %}
+                        {% for feature in plan_features.features %}
+                        <li class="flex items-center">
+                            <svg class="h-5 w-5 text-green-500 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            <span class="text-gray-700">{{ feature }}</span>
+                        </li>
+                        {% endfor %}
                     </ul>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Billing History -->
-    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
-        <div class="px-4 py-5 sm:px-6">
-            <h2 class="text-lg font-medium text-gray-900">Billing History</h2>
-            <p class="mt-1 text-sm text-gray-500">View your recent invoices</p>
-        </div>
-        <div class="border-t border-gray-200">
-            {% if invoices %}
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        {% for invoice in invoices %}
-                        <tr>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ invoice.date }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ invoice.description }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${{ invoice.amount }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                    {{ invoice.status }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <a href="{{ invoice.pdf_url }}" class="text-indigo-600 hover:text-indigo-900">Download</a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% else %}
-                <div class="px-6 py-10 text-center">
-                    <p class="text-gray-500">No billing history available</p>
+            <!-- Payment Method Section -->
+            {% if user.subscription_plan != 'free' %}
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Payment Method</h2>
+                
+                {% if user.has_active_payment_method %}
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center">
+                        <svg class="h-8 w-8 text-gray-500 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                            <line x1="1" y1="10" x2="23" y2="10"></line>
+                        </svg>
+                        <div>
+                            <span class="block font-semibold">•••• •••• •••• {{ user.payment_method_id|slice:"-4:" }}</span>
+                            <span class="text-sm text-gray-600">Expires: XX/XX</span>
+                        </div>
+                    </div>
+                    <button id="updatePaymentBtn" class="text-indigo-500 hover:text-indigo-700 font-medium">
+                        Update
+                    </button>
                 </div>
+                {% else %}
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-yellow-700">
+                                No payment method on file. Add a payment method to continue your subscription.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <button id="addPaymentBtn" class="bg-indigo-500 hover:bg-indigo-600 text-white py-2 px-4 rounded-md transition duration-300 ease-in-out">
+                    Add Payment Method
+                </button>
+                {% endif %}
+                
+                <!-- Payment Form (hidden by default) -->
+                <div id="paymentFormContainer" class="hidden mt-6 border-t border-gray-200 pt-4">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-3">Update Payment Method</h3>
+                    <form id="payment-form" class="space-y-4">
+                        <div id="payment-element">
+                            <!-- Stripe Elements will be inserted here -->
+                        </div>
+                        <div id="payment-message" class="hidden text-sm text-red-500 mt-2"></div>
+                        <button id="submitBtn" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white py-2 px-4 rounded-md transition duration-300 ease-in-out">
+                            Update
+                        </button>
+                        <button type="button" id="cancelPaymentBtn" class="w-full bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-md transition duration-300 ease-in-out">
+                            Cancel
+                        </button>
+                    </form>
+                </div>
+            </div>
             {% endif %}
+
+            <!-- Cancel Subscription -->
+            {% if user.subscription_plan != 'free' %}
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Cancel Subscription</h2>
+                
+                <p class="text-gray-600 mb-4">
+                    If you cancel your subscription, you'll still have access to {{ user.get_subscription_plan_display }} features until the end of your current billing period.
+                </p>
+                
+                <form method="post" action="{% url 'cancel_subscription' %}" onsubmit="return confirm('Are you sure you want to cancel your subscription? You will continue to have access until the end of your billing period.')">
+                    {% csrf_token %}
+                    <button type="submit" class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-md transition duration-300 ease-in-out">
+                        Cancel Subscription
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="w-full md:w-1/3 mt-6 md:mt-0">
+            <!-- Billing History -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Billing History</h2>
+                
+                {% if recent_invoices %}
+                <div class="space-y-4">
+                    {% for invoice in recent_invoices %}
+                    <div class="border-b border-gray-200 pb-4 last:border-b-0 last:pb-0">
+                        <div class="flex justify-between mb-2">
+                            <span class="font-medium">{{ invoice.invoice_date|date:"F j, Y" }}</span>
+                            <span class="font-semibold">${{ invoice.amount }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">{{ invoice.description }}</span>
+                            <span class="{% if invoice.status == 'paid' %}text-green-500{% elif invoice.status == 'failed' %}text-red-500{% else %}text-yellow-500{% endif %}">
+                                {{ invoice.get_status_display }}
+                            </span>
+                        </div>
+                        {% if invoice.invoice_pdf_url %}
+                        <div class="mt-2">
+                            <a href="{{ invoice.invoice_pdf_url }}" target="_blank" class="text-indigo-500 hover:text-indigo-700 text-sm flex items-center">
+                                <svg class="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd" />
+                                </svg>
+                                Download Invoice
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-gray-500 italic">No billing history available</div>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Stripe 
+        const stripe = Stripe('{{ stripe_public_key }}');
+        let elements;
+        
+        // Setup event listeners for payment buttons
+        const updatePaymentBtn = document.getElementById('updatePaymentBtn');
+        const addPaymentBtn = document.getElementById('addPaymentBtn');
+        const cancelPaymentBtn = document.getElementById('cancelPaymentBtn');
+        const paymentFormContainer = document.getElementById('paymentFormContainer');
+        
+        // Setup payment form display toggle
+        if (updatePaymentBtn) {
+            updatePaymentBtn.addEventListener('click', function() {
+                setupPaymentForm();
+                paymentFormContainer.classList.remove('hidden');
+            });
+        }
+        
+        if (addPaymentBtn) {
+            addPaymentBtn.addEventListener('click', function() {
+                setupPaymentForm();
+                paymentFormContainer.classList.remove('hidden');
+            });
+        }
+        
+        if (cancelPaymentBtn) {
+            cancelPaymentBtn.addEventListener('click', function() {
+                paymentFormContainer.classList.add('hidden');
+            });
+        }
+        
+        // Function to setup the payment form
+        function setupPaymentForm() {
+            // Fetch setup intent from server
+            fetch('{% url "update_payment_method" %}')
+                .then(response => response.json())
+                .then(data => {
+                    const clientSecret = data.client_secret;
+                    
+                    // Create payment elements
+                    const appearance = {
+                        theme: 'stripe',
+                        variables: {
+                            colorPrimary: '#6366f1',
+                        }
+                    };
+                    
+                    elements = stripe.elements({
+                        clientSecret,
+                        appearance
+                    });
+                    
+                    const paymentElement = elements.create('payment');
+                    paymentElement.mount('#payment-element');
+                    
+                    // Handle form submission
+                    const form = document.getElementById('payment-form');
+                    form.addEventListener('submit', handleSubmit);
+                })
+                .catch(error => {
+                    const messageContainer = document.getElementById('payment-message');
+                    messageContainer.textContent = 'An error occurred while setting up the payment form. Please try again.';
+                    messageContainer.classList.remove('hidden');
+                });
+        }
+        
+        // Handle payment form submission
+        async function handleSubmit(e) {
+            e.preventDefault();
+            
+            const submitButton = document.getElementById('submitBtn');
+            const messageContainer = document.getElementById('payment-message');
+            
+            submitButton.disabled = true;
+            submitButton.textContent = 'Processing...';
+            
+            const {error} = await stripe.confirmSetup({
+                elements,
+                confirmParams: {
+                    return_url: window.location.href,
+                }
+            });
+            
+            if (error) {
+                messageContainer.textContent = error.message;
+                messageContainer.classList.remove('hidden');
+                submitButton.disabled = false;
+                submitButton.textContent = 'Update';
+            } else {
+                messageContainer.classList.add('hidden');
+                // The SetupIntent is processed on the server via webhook
+            }
+        }
+    });
+</script>
 {% endblock %} 

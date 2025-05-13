@@ -9,8 +9,42 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
 from .forms import CustomUserCreationForm, CustomAuthenticationForm, UserProfileForm, CustomPasswordChangeForm
-from .models import CustomUser, UserActivity
+from .models import CustomUser, UserActivity, Subscription, SubscriptionInvoice
 from django.urls import reverse
+import stripe
+from django.http import JsonResponse, HttpResponse
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+
+# Stripe configuration
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
+# Define price IDs for each plan
+STRIPE_PRICE_IDS = {
+    'basic': 'price_1ROFmxCTLeMMvOE0kfWAbUZq',
+    'premium': 'price_1ROFo4CTLeMMvOE0qMgz5mf6',
+    'enterprise': 'price_1ROFp6CTLeMMvOE0qa53yQlq',
+}
+
+# Plan features and limits
+PLAN_FEATURES = {
+    'free': {
+        'emails_per_month': 100,
+        'features': ['Single User', 'Basic Analytics', 'Email Support']
+    },
+    'basic': {
+        'emails_per_month': 5000,
+        'features': ['5 Users', 'Advanced Analytics', 'Priority Email Support', 'Custom Templates']
+    },
+    'premium': {
+        'emails_per_month': 20000,
+        'features': ['10 Users', 'Advanced Analytics', 'Priority Email Support', 'Custom Templates', 'API Access', 'Dedicated Account Manager']
+    },
+    'enterprise': {
+        'emails_per_month': 100000,
+        'features': ['Unlimited Users', 'Advanced Analytics', '24/7 Phone Support', 'Custom Templates', 'API Access', 'Dedicated Account Manager', 'White Labeling', 'Custom Integration']
+    }
+}
 
 def user_login(request):
     """
@@ -177,44 +211,630 @@ def resend_verification(request):
 
 @login_required
 def subscription(request):
-    """
-    View subscription details
-    """
-    return render(request, 'users/subscription.html', {'user': request.user})
+    user = request.user
+    
+    # Get subscription data for the user
+    active_subscription = None
+    try:
+        active_subscription = Subscription.objects.filter(
+            user=user, 
+            status='active'
+        ).latest('created_at')
+    except Subscription.DoesNotExist:
+        pass
+    
+    # Get latest invoices
+    recent_invoices = SubscriptionInvoice.objects.filter(
+        user=user
+    ).order_by('-invoice_date')[:5]
+    
+    # Calculate usage percentage
+    usage_percentage = user.get_usage_percentage()
+    
+    # Get plan features
+    plan_features = PLAN_FEATURES.get(user.subscription_plan, PLAN_FEATURES['free'])
+    
+    context = {
+        'user': user,
+        'subscription': active_subscription,
+        'recent_invoices': recent_invoices,
+        'usage_percentage': usage_percentage,
+        'plan_features': plan_features,
+        'subscription_renewal': user.subscription_renewal,
+        'stripe_public_key': settings.STRIPE_PUBLIC_KEY,
+    }
+    
+    return render(request, 'users/subscription.html', context)
 
 @login_required
 def upgrade_subscription(request):
-    """
-    Upgrade subscription view
-    """
-    # This would normally integrate with a payment processor
+    user = request.user
     
     if request.method == 'POST':
         plan = request.POST.get('plan')
+        
         if plan in ['basic', 'premium', 'enterprise']:
-            request.user.subscription_plan = plan
-            
-            # Set quota based on the plan
-            if plan == 'basic':
-                request.user.usage_quota = 5000
-            elif plan == 'premium':
-                request.user.usage_quota = 20000
-            elif plan == 'enterprise':
-                request.user.usage_quota = 100000
-            
-            request.user.save()
-            
-            # Record subscription change
-            UserActivity.objects.create(
-                user=request.user,
-                action='subscription_changed',
-                details={'plan': plan}
-            )
-            
-            messages.success(request, f'Your subscription has been upgraded to {plan.title()}!')
+            try:
+                # If user doesn't have a Stripe customer ID yet, create one
+                if not user.stripe_customer_id:
+                    try:
+                        print(f"Creating Stripe customer for user: {user.email}")
+                        customer = stripe.Customer.create(
+                            email=user.email,
+                            name=f"{user.first_name} {user.last_name}",
+                            metadata={
+                                'user_id': user.id
+                            }
+                        )
+                        user.stripe_customer_id = customer.id
+                        user.save()
+                        print(f"Created Stripe customer: {customer.id}")
+                    except Exception as e:
+                        print(f"Error creating Stripe customer: {str(e)}")
+                        messages.error(request, f"Error creating customer profile: {str(e)}")
+                        return redirect('subscription')
+                else:
+                    print(f"Using existing Stripe customer: {user.stripe_customer_id}")
+                    # Verify customer exists and is valid
+                    try:
+                        stripe.Customer.retrieve(user.stripe_customer_id)
+                    except stripe.error.InvalidRequestError:
+                        print(f"Invalid customer ID, creating new customer")
+                        # Customer doesn't exist, create a new one
+                        customer = stripe.Customer.create(
+                            email=user.email,
+                            name=f"{user.first_name} {user.last_name}",
+                            metadata={
+                                'user_id': user.id
+                            }
+                        )
+                        user.stripe_customer_id = customer.id
+                        user.save()
+                
+                # Verify the price ID exists
+                price_id = STRIPE_PRICE_IDS.get(plan)
+                if not price_id:
+                    messages.error(request, f"Invalid plan price ID for plan: {plan}")
+                    return redirect('subscription')
+                
+                print(f"Using price ID: {price_id} for plan: {plan}")
+                
+                # Verify the price exists in Stripe
+                try:
+                    stripe.Price.retrieve(price_id)
+                except stripe.error.InvalidRequestError as e:
+                    print(f"Invalid price ID: {price_id}, error: {str(e)}")
+                    messages.error(request, f"The selected plan is currently unavailable. Please contact support.")
+                    return redirect('subscription')
+                
+                # Create a checkout session with expanded properties for better debugging
+                print(f"Creating checkout session for user: {user.email}, plan: {plan}")
+                checkout_session = stripe.checkout.Session.create(
+                    customer=user.stripe_customer_id,
+                    payment_method_types=['card'],
+                    line_items=[{
+                        'price': price_id,
+                        'quantity': 1,
+                    }],
+                    mode='subscription',
+                    success_url=request.build_absolute_uri(reverse('subscription_success')) + f'?session_id={{CHECKOUT_SESSION_ID}}&plan={plan}',
+                    cancel_url=request.build_absolute_uri(reverse('subscription')),
+                    expand=['payment_intent'],
+                )
+                
+                # Store session ID temporarily
+                request.session['checkout_session_id'] = checkout_session.id
+                request.session['selected_plan'] = plan
+                
+                print(f"Created checkout session: {checkout_session.id}, URL: {checkout_session.url}")
+                
+                # Redirect to Stripe Checkout
+                return redirect(checkout_session.url)
+                
+            except stripe.error.CardError as e:
+                # Since it's a decline, stripe.error.CardError will be caught
+                print(f"Card error: {str(e)}")
+                error_msg = f"Your card was declined: {e.user_message}" if hasattr(e, 'user_message') else "Your card was declined."
+                messages.error(request, error_msg)
+                return redirect('subscription')
+            except stripe.error.RateLimitError as e:
+                # Too many requests made to the API too quickly
+                print(f"Rate limit error: {str(e)}")
+                messages.error(request, "Too many payment requests. Please try again in a moment.")
+                return redirect('subscription')
+            except stripe.error.InvalidRequestError as e:
+                # Invalid parameters were supplied to Stripe's API
+                print(f"Invalid request error: {str(e)}")
+                messages.error(request, "There was an issue with your payment information. Please check your details and try again.")
+                return redirect('subscription')
+            except stripe.error.AuthenticationError as e:
+                # Authentication with Stripe's API failed
+                print(f"Authentication error: {str(e)}")
+                messages.error(request, "We're having trouble connecting to our payment processor. Please try again later.")
+                return redirect('subscription')
+            except stripe.error.APIConnectionError as e:
+                # Network communication with Stripe failed
+                print(f"API connection error: {str(e)}")
+                messages.error(request, "We're having trouble connecting to our payment processor. Please check your internet connection and try again.")
+                return redirect('subscription')
+            except stripe.error.StripeError as e:
+                # Display a very generic error to the user
+                print(f"Stripe error: {str(e)}")
+                error_msg = f"Payment processing error: {e.user_message}" if hasattr(e, 'user_message') else "An unexpected error occurred with the payment processor."
+                messages.error(request, error_msg)
+                return redirect('subscription')
+            except Exception as e:
+                print(f"Unexpected error: {str(e)}")
+                messages.error(request, f'An unexpected error occurred. Our team has been notified.')
+                return redirect('subscription')
+                
+        else:
+            messages.error(request, 'Invalid subscription plan selected')
             return redirect('subscription')
     
-    return render(request, 'users/upgrade_subscription.html')
+    # For GET requests - display the upgrade options
+    context = {
+        'user': user,
+        'plans': {
+            'basic': PLAN_FEATURES['basic'],
+            'premium': PLAN_FEATURES['premium'],
+            'enterprise': PLAN_FEATURES['enterprise'],
+        },
+        'stripe_public_key': settings.STRIPE_PUBLIC_KEY,
+    }
+    
+    return render(request, 'users/upgrade_subscription.html', context)
+
+@login_required
+def subscription_success(request):
+    session_id = request.GET.get('session_id')
+    plan = request.GET.get('plan')
+    
+    if not session_id:
+        messages.error(request, 'Missing checkout session ID')
+        return redirect('subscription')
+    
+    try:
+        print(f"Processing subscription success for session: {session_id}, plan: {plan}")
+        
+        # Retrieve session from Stripe
+        try:
+            session = stripe.checkout.Session.retrieve(
+                session_id,
+                expand=['subscription', 'subscription.default_payment_method']
+            )
+            print(f"Retrieved checkout session, status: {session.status}")
+        except stripe.error.InvalidRequestError as e:
+            print(f"Error retrieving session: {str(e)}")
+            messages.error(request, 'Unable to verify subscription details. If your payment was successful, it may take a few minutes to reflect in your account.')
+            return redirect('subscription')
+        
+        if session.status != 'complete':
+            print(f"Session is not complete: {session.status}")
+            messages.warning(request, 'Your payment is being processed. It may take a few minutes to update your subscription.')
+            return redirect('subscription')
+        
+        # Update user's subscription information
+        user = request.user
+        
+        # Set subscription details
+        user.subscription_plan = plan
+        
+        # Set usage quota based on plan
+        if plan == 'basic':
+            user.usage_quota = 5000
+        elif plan == 'premium':
+            user.usage_quota = 20000
+        elif plan == 'enterprise':
+            user.usage_quota = 100000
+        
+        # Reset usage count for new billing period
+        user.usage_count = 0
+        
+        # Update Stripe subscription ID
+        if hasattr(session, 'subscription') and session.subscription:
+            user.stripe_subscription_id = session.subscription.id if isinstance(session.subscription, dict) else session.subscription
+            
+            # Retrieve the subscription to get more details if needed
+            subscription_object = None
+            try:
+                if isinstance(session.subscription, str):
+                    subscription_object = stripe.Subscription.retrieve(session.subscription)
+                else:
+                    subscription_object = session.subscription
+                
+                # Get renewal date from subscription
+                current_period_end = subscription_object.current_period_end
+                renewal_date = timezone.datetime.fromtimestamp(
+                    current_period_end, tz=timezone.utc
+                )
+                user.subscription_renewal = renewal_date
+            except Exception as e:
+                print(f"Error retrieving subscription details: {str(e)}")
+                # Use default renewal date as fallback
+                user.subscription_renewal = timezone.now() + timezone.timedelta(days=30)
+        else:
+            print("Warning: No subscription found in session")
+            # Use default renewal date
+            user.subscription_renewal = timezone.now() + timezone.timedelta(days=30)
+        
+        # Update payment method status
+        user.has_active_payment_method = True
+        
+        user.save()
+        print(f"Updated user subscription details for {user.email}")
+        
+        # Create a Subscription record if it doesn't already exist
+        try:
+            # Check if subscription already exists (could have been created by webhook)
+            existing_sub = Subscription.objects.filter(
+                user=user,
+                stripe_subscription_id=user.stripe_subscription_id,
+                status='active'
+            ).exists()
+            
+            if not existing_sub and user.stripe_subscription_id:
+                # Create a new subscription record
+                new_subscription = Subscription.objects.create(
+                    user=user,
+                    plan=plan,
+                    status='active',
+                    stripe_subscription_id=user.stripe_subscription_id,
+                    start_date=timezone.now(),
+                    next_billing_date=user.subscription_renewal,
+                )
+                print(f"Created new subscription record for {user.email}")
+                
+                # Log user activity
+                UserActivity.objects.create(
+                    user=user, 
+                    action='subscription_upgraded',
+                    details={
+                        'plan': plan,
+                        'previous_plan': user.subscription_plan,
+                        'stripe_subscription_id': user.stripe_subscription_id
+                    }
+                )
+            else:
+                print(f"Subscription record already exists or missing subscription ID")
+        except Exception as e:
+            print(f"Error creating subscription record: {str(e)}")
+        
+        messages.success(request, f'Successfully upgraded to {plan.title()} plan!')
+        
+    except Exception as e:
+        print(f"Unexpected error in subscription_success: {str(e)}")
+        messages.error(request, 'An error occurred while processing your subscription. If your payment was successful, it may take a few minutes to reflect in your account.')
+    
+    return redirect('subscription')
+
+@login_required
+def cancel_subscription(request):
+    if request.method == 'POST':
+        user = request.user
+        
+        if not user.stripe_subscription_id:
+            messages.error(request, 'No active subscription found')
+            return redirect('subscription')
+        
+        try:
+            # Get the subscription from Stripe
+            subscription = stripe.Subscription.retrieve(user.stripe_subscription_id)
+            
+            # Cancel the subscription at period end
+            stripe.Subscription.modify(
+                user.stripe_subscription_id,
+                cancel_at_period_end=True
+            )
+            
+            # Update the subscription in our database
+            user_subscription = Subscription.objects.get(
+                user=user,
+                stripe_subscription_id=user.stripe_subscription_id,
+                status='active'
+            )
+            user_subscription.cancel_at_period_end = True
+            user_subscription.save()
+            
+            # Log the activity
+            UserActivity.objects.create(
+                user=user,
+                action='subscription_cancelled',
+                details={
+                    'plan': user.subscription_plan,
+                    'effective_cancellation_date': subscription.current_period_end
+                }
+            )
+            
+        except Subscription.DoesNotExist:
+            messages.error(request, 'Subscription not found in our records')
+        except Exception as e:
+            messages.error(request, f'Error cancelling subscription: {str(e)}')
+    
+    return redirect('subscription')
+
+@login_required
+def update_payment_method(request):
+    user = request.user
+    
+    try:
+        # Create a SetupIntent for updating payment method
+        setup_intent = stripe.SetupIntent.create(
+            customer=user.stripe_customer_id,
+            payment_method_types=['card'],
+        )
+        
+        return JsonResponse({
+            'client_secret': setup_intent.client_secret,
+            'stripe_public_key': settings.STRIPE_PUBLIC_KEY,
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+@csrf_exempt
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+    
+    print(f"Received webhook with signature header: {sig_header is not None}")
+    
+    if not sig_header:
+        print("Error: No Stripe signature header found in the request")
+        return HttpResponse(status=400)
+    
+    try:
+        print(f"Attempting to construct event with webhook secret: {settings.STRIPE_WEBHOOK_SECRET[:6]}...")
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+        )
+        print(f"Successfully parsed webhook event type: {event.type}")
+    except ValueError as e:
+        # Invalid payload
+        print(f"Invalid webhook payload: {str(e)}")
+        return HttpResponse(status=400)
+    except stripe.error.SignatureVerificationError as e:
+        # Invalid signature
+        print(f"Invalid webhook signature: {str(e)}")
+        print(f"Check if the STRIPE_WEBHOOK_SECRET in settings.py is correct.")
+        return HttpResponse(status=400)
+    
+    # Handle the event
+    if event.type == 'checkout.session.completed':
+        # Handle checkout session completed event
+        session = event.data.object
+        print(f"Checkout session completed: {session.id}")
+        
+        if session.mode == 'subscription':
+            try:
+                # Find the user by customer ID
+                customer_id = session.customer
+                subscription_id = session.subscription
+                
+                print(f"Processing successful subscription: customer={customer_id}, subscription={subscription_id}")
+                
+                try:
+                    user = CustomUser.objects.get(stripe_customer_id=customer_id)
+                    
+                    # Get the plan from session metadata or other source
+                    if 'selected_plan' in session.metadata:
+                        plan = session.metadata.selected_plan
+                    else:
+                        # Try to determine the plan from the subscription
+                        sub_details = stripe.Subscription.retrieve(subscription_id)
+                        price_id = sub_details.items.data[0].price.id
+                        # Find the plan key by price ID value
+                        plan = next((k for k, v in STRIPE_PRICE_IDS.items() if v == price_id), 'basic')
+                    
+                    print(f"Plan determined: {plan}")
+                    
+                    # Update user's subscription details
+                    user.subscription_plan = plan
+                    
+                    # Set usage quota based on plan
+                    if plan == 'basic':
+                        user.usage_quota = 5000
+                    elif plan == 'premium':
+                        user.usage_quota = 20000
+                    elif plan == 'enterprise':
+                        user.usage_quota = 100000
+                    
+                    # Reset usage count for new billing period
+                    user.usage_count = 0
+                    
+                    # Update Stripe subscription ID
+                    user.stripe_subscription_id = subscription_id
+                    
+                    # Set renewal date (30 days from now as default)
+                    user.subscription_renewal = timezone.now() + timezone.timedelta(days=30)
+                    
+                    # Update payment method status
+                    user.has_active_payment_method = True
+                    
+                    user.save()
+                    
+                    # Create a Subscription record
+                    sub = Subscription.objects.create(
+                        user=user,
+                        plan=plan,
+                        status='active',
+                        stripe_subscription_id=subscription_id,
+                        start_date=timezone.now(),
+                        next_billing_date=timezone.now() + timezone.timedelta(days=30),
+                    )
+                    
+                    print(f"Created subscription record for user: {user.email}")
+                    
+                    # Log user activity
+                    UserActivity.objects.create(
+                        user=user, 
+                        action='subscription_upgraded',
+                        details={
+                            'plan': plan,
+                            'subscription_id': subscription_id
+                        }
+                    )
+                    
+                except CustomUser.DoesNotExist:
+                    print(f"Could not find user with Stripe customer ID: {customer_id}")
+                
+            except Exception as e:
+                print(f"Error processing checkout.session.completed: {str(e)}")
+    
+    elif event.type == 'invoice.paid':
+        # Handle successful payment
+        invoice = event.data.object
+        subscription_id = invoice.subscription
+        customer_id = invoice.customer
+        
+        print(f"Processing paid invoice: {invoice.id} for subscription: {subscription_id}")
+        
+        try:
+            user = CustomUser.objects.get(stripe_customer_id=customer_id)
+            subscription = Subscription.objects.get(
+                stripe_subscription_id=subscription_id,
+                user=user
+            )
+            
+            # Create invoice record
+            SubscriptionInvoice.objects.create(
+                user=user,
+                subscription=subscription,
+                stripe_invoice_id=invoice.id,
+                amount=invoice.amount_paid / 100.0,  # Convert from cents
+                status='paid',
+                description=f"Payment for {subscription.plan.title()} plan",
+                invoice_date=timezone.now(),
+                due_date=timezone.now(),
+                invoice_pdf_url=invoice.invoice_pdf,
+            )
+            
+            # Reset usage count for new billing period
+            user.reset_usage_count()
+            
+            # Update next billing date
+            subscription.next_billing_date = timezone.datetime.fromtimestamp(
+                invoice.period_end, tz=timezone.utc
+            ) + timezone.timedelta(days=1)
+            subscription.save()
+            
+            # Update user's renewal date
+            user.subscription_renewal = subscription.next_billing_date
+            user.save()
+            
+            # Log activity
+            UserActivity.objects.create(
+                user=user,
+                action='payment_successful',
+                details={
+                    'invoice_id': invoice.id,
+                    'amount': invoice.amount_paid / 100.0,
+                    'plan': subscription.plan
+                }
+            )
+            print(f"Successfully processed paid invoice for user: {user.email}")
+            
+        except CustomUser.DoesNotExist:
+            print(f"Could not find user with Stripe customer ID: {customer_id}")
+        except Subscription.DoesNotExist:
+            print(f"Could not find subscription with ID: {subscription_id} for user with Stripe customer ID: {customer_id}")
+        except Exception as e:
+            print(f"Error processing paid invoice: {str(e)}")
+    
+    elif event.type == 'invoice.payment_failed':
+        # Handle failed payment
+        invoice = event.data.object
+        subscription_id = invoice.subscription
+        customer_id = invoice.customer
+        
+        try:
+            user = CustomUser.objects.get(stripe_customer_id=customer_id)
+            subscription = Subscription.objects.get(
+                stripe_subscription_id=subscription_id,
+                user=user
+            )
+            
+            # Create invoice record
+            SubscriptionInvoice.objects.create(
+                user=user,
+                subscription=subscription,
+                stripe_invoice_id=invoice.id,
+                amount=invoice.amount_due / 100.0,  # Convert from cents
+                status='failed',
+                description=f"Failed payment for {subscription.plan.title()} plan",
+                invoice_date=timezone.now(),
+                due_date=timezone.datetime.fromtimestamp(
+                    invoice.next_payment_attempt, tz=timezone.utc
+                ) if invoice.next_payment_attempt else timezone.now() + timezone.timedelta(days=3),
+            )
+            
+            # Log activity
+            UserActivity.objects.create(
+                user=user,
+                action='payment_failed',
+                details={
+                    'invoice_id': invoice.id,
+                    'amount': invoice.amount_due / 100.0,
+                    'plan': subscription.plan
+                }
+            )
+            
+        except (CustomUser.DoesNotExist, Subscription.DoesNotExist):
+            # Log this error somewhere
+            pass
+    
+    elif event.type == 'customer.subscription.deleted':
+        # Handle subscription cancellation
+        subscription = event.data.object
+        customer_id = subscription.customer
+        
+        try:
+            user = CustomUser.objects.get(stripe_customer_id=customer_id)
+            user_subscription = Subscription.objects.get(
+                stripe_subscription_id=subscription.id,
+                user=user
+            )
+            
+            # Update subscription status
+            user_subscription.status = 'cancelled'
+            user_subscription.end_date = timezone.datetime.fromtimestamp(
+                subscription.ended_at, tz=timezone.utc
+            ) if subscription.ended_at else timezone.now()
+            user_subscription.save()
+            
+            # Downgrade user to free plan
+            user.subscription_plan = 'free'
+            user.usage_quota = 100
+            user.save()
+            
+            # Log activity
+            UserActivity.objects.create(
+                user=user,
+                action='subscription_ended',
+                details={
+                    'plan': user_subscription.plan,
+                    'subscription_id': subscription.id
+                }
+            )
+            
+        except (CustomUser.DoesNotExist, Subscription.DoesNotExist):
+            # Log this error somewhere
+            pass
+    
+    return HttpResponse(status=200)
+
+def pricing(request):
+    """View for the pricing page accessible to all users"""
+    # Determine if user is authenticated to show different CTAs
+    is_authenticated = request.user.is_authenticated
+    current_plan = request.user.subscription_plan if is_authenticated else None
+    
+    context = {
+        'plans': PLAN_FEATURES,
+        'is_authenticated': is_authenticated,
+        'current_plan': current_plan,
+    }
+    
+    return render(request, 'marketing/pricing.html', context)
 
 # Helper functions
 def send_verification_email(request, user):

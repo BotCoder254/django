@@ -36,4 +36,10 @@ urlpatterns = [
     # Subscription management
     path('subscription/', views.subscription, name='subscription'),
     path('subscription/upgrade/', views.upgrade_subscription, name='upgrade_subscription'),
+    path('subscription/success/', views.subscription_success, name='subscription_success'),
+    path('subscription/cancel/', views.cancel_subscription, name='cancel_subscription'),
+    path('subscription/update-payment/', views.update_payment_method, name='update_payment_method'),
+    
+    # Stripe webhook
+    path('webhook/stripe/', views.stripe_webhook, name='stripe_webhook'),
 ] 
