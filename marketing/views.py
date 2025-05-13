@@ -58,6 +58,13 @@ def get_client_ip(request):
         ip = request.META.get('REMOTE_ADDR')
     return ip
 
+# Health check endpoint for monitoring
+def health_check(request):
+    """
+    Health check endpoint for deployment monitoring
+    """
+    return JsonResponse({"status": "healthy", "timestamp": timezone.now().isoformat()})
+
 # Public views for landing page and marketing pages
 def landing_page(request):
     """

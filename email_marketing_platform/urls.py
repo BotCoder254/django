@@ -32,8 +32,10 @@ urlpatterns = [
     path('automations/<int:pk>/test/', views.test_automation, name='test_automation'),
     path('automations/template/<str:template>/', views.create_automation_from_template, name='create_automation_from_template'),
     path('campaigns/<int:pk>/test/', views.test_campaign, name='test_campaign'),
+    path('health/', views.health_check, name='health_check'),
 ]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_URL)
+# In production, the static files are handled by whitenoise middleware
